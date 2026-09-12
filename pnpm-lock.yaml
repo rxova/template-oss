@@ -39,8 +39,8 @@ importers:
         specifier: ^17.5.1
         version: 17.5.1
       overlock:
-        specifier: ^0.8.0
-        version: 0.8.0
+        specifier: ^0.9.0
+        version: 0.9.0
       prettier:
         specifier: ^3.9.6
         version: 3.9.6
@@ -2615,8 +2615,8 @@ packages:
     resolution: {integrity: sha512-6IpQ7mKUxRcZNLIObR0hz7lxsapSSIYNZJwXPGeF0mTVqGKFIXj1DQcMoT22S3ROcLyY/rz0PWaWZ9ayWmad9g==}
     engines: {node: '>= 0.8.0'}
 
-  overlock@0.8.0:
-    resolution: {integrity: sha512-gn3Q3GqxPf0Zwjef8JHe1GZ41yvYrBpXJxFUd1GWqIUweEz5jcI0+keLY2SUBuFrtJ/LMhp+IRbI06DWna+NmQ==}
+  overlock@0.9.0:
+    resolution: {integrity: sha512-0xJalunZFnzbZfTu6Rjm18krxp23JL/egAoyAv/LcM5eOIQ9ysJa/JfgfzSODhte01sbknhHmG8ksWhP6ebteQ==}
     engines: {node: '>=20.11'}
     hasBin: true
 
@@ -6098,7 +6098,7 @@ snapshots:
       type-check: 0.4.0
       word-wrap: 1.2.5
 
-  overlock@0.8.0: {}
+  overlock@0.9.0: {}
 
   p-limit@3.1.0:
     dependencies:
