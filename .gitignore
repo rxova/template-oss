@@ -1,0 +1,23 @@
+node_modules
+dist
+coverage
+.turbo
+*.tsbuildinfo
+.DS_Store
+.env
+.env.*
+!.env.example
+
+# Astro's generated types and content cache.
+apps/docs/.astro/
+
+# Local agent state. The Stop hooks are the exception: cloud and mobile sessions
+# read hooks from the repository, never from ~/.claude.
+.claude/*
+!.claude/settings.json
+!.claude/hooks/
+.claude.json
+CLAUDE.local.md
+
+# Run records written by the integrity tools.
+.overlock/
