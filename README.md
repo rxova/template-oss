@@ -6,17 +6,17 @@ breadth.
 
 ## What is in it
 
-| Piece              | Details                                                                                                                |
-| ------------------ | ---------------------------------------------------------------------------------------------------------------------- |
-| `packages/example` | Publishable ESM package built with tsdown; publint + attw + a pack smoke test                                          |
-| `packages/tooling` | `verify` (the pre-push gate), changeset gate, release-commit detection, pack smoke                                     |
-| `apps/docs`        | Astro Starlight, links validator, sitemap, deployed to GitHub Pages                                                    |
-| Quality            | TypeScript 6 strict, ESLint 10 + typescript-eslint, Prettier, Vitest 5 (95%/file)                                      |
-| Hooks              | Husky: lint-staged + typecheck + tests on commit, commitlint, `verify` on push                                         |
-| Agent hooks        | Claude Code Stop hooks for overlock, saidso and basting (`.claude/`)                                                   |
-| Releases           | Changesets → version PR → npm with trusted publishing and provenance                                                   |
-| CI                 | Parallel jobs; tests on Node 22/24 × Linux/macOS/Windows; CodeQL; Codecov; overlock on every PR; one `all checks` gate |
-| Dependabot         | Weekly, one grouped PR per ecosystem, labelled `skip-changeset`                                                        |
+| Piece              | Details                                                                                                                                                |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `packages/example` | Publishable ESM package built with tsdown; publint + attw + a pack smoke test                                                                          |
+| `packages/tooling` | `verify` (the pre-push gate), changeset gate, release-commit detection, pack smoke                                                                     |
+| `apps/docs`        | Astro Starlight, links validator, sitemap, deployed to GitHub Pages                                                                                    |
+| Quality            | TypeScript 6 strict, ESLint 10 + typescript-eslint, Prettier, Vitest 5 (95%/file)                                                                      |
+| Hooks              | Husky: lint-staged + typecheck + tests on commit, commitlint, `verify` on push                                                                         |
+| Agent hooks        | Claude Code Stop hooks for overlock, saidso and basting (`.claude/`)                                                                                   |
+| Releases           | Changesets → version PR → npm with trusted publishing and provenance                                                                                   |
+| CI                 | Parallel jobs; tests on Node 22/24 × Linux/macOS/Windows; CodeQL; Codecov; overlock on every PR; one `all checks` gate                                 |
+| Dependabot         | Weekly, one grouped PR per ecosystem, labelled `skip-changeset`; patch/minor updates auto-merge once `all checks` passes (`dependabot-auto-merge.yml`) |
 
 ## After creating a repository from this template
 
