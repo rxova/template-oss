@@ -24,6 +24,9 @@ concurrency:
 jobs:
   analyze:
     name: Analyze
+    # Code scanning is free on public repositories only; on a private one (this
+    # template, or a project before it goes public) the upload is refused.
+    if: ${{ !github.event.repository.private }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
