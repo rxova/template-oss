@@ -96,7 +96,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # 22 is the oldest Node the toolchain (pnpm 11) installs on; 24 is
+        # 22 is the major `engines` promises; 24 is
         # current LTS. Path separators, line endings and the shell all differ
         # on Windows, and only a Windows leg would notice.
         node-version: [22, 24]
@@ -182,8 +182,8 @@ jobs:
   # promise about 22.13. This installs each packed tarball on exactly that floor,
   # read from the manifests so lowering the promise moves the job with it.
   # Plain `node` from the switch on, never pnpm or Turbo: Turbo does not hash the
-  # Node binary, so it would replay a result from another version, and pnpm 11
-  # will not start below 22.13 — a floor a project is free to lower.
+  # Node binary, so it would replay a result from another version, and the
+  # toolchain has floors of its own that a project is free to go below.
   compat:
     name: packages on their oldest node
     needs: [commitlint]
