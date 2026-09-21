@@ -1,70 +1,72 @@
-// Weekly, grouped, and patch/minor updates merge themselves once the required
-// `all checks` status passes. A major bump always gets its own pull request and
-// waits for a human.
 {
   $schema: 'https://docs.renovatebot.com/renovate-schema.json',
-  extends: ['config:recommended', ':semanticCommitTypeAll(chore)'],
-  schedule: ['before 6am on monday'],
-  timezone: 'Etc/UTC',
 
-  // `skip-changeset` is the escape hatch the changeset gate reads: a bump
-  // changes what the repository builds with, never what it publishes. Both
-  // labels must exist — see the README.
+  // Renovate rather than Dependabot, for `postUpdateOptions` below. Dependabot
+  // patches the lockfile with its own logic and never runs the package manager,
+  // so `dedupe:check` rejects nearly every pull request it opens. Renovate runs
+  // pnpm itself.
+
+  extends: [
+    'config:recommended',
+
+    // One pull request for everything that is not a major.
+    'group:allNonMajor',
+    'schedule:weekly',
+
+    // Hold a freshly published version back for a few days. A compromised
+    // release is usually caught within hours, and nothing here is urgent
+    // enough to be the one that finds out first.
+    'security:minimumReleaseAgeNpm',
+
+    // `chore(deps): …`, so the pull request title is a valid commit subject
+    // for commitlint.
+    ':semanticCommits',
+    ':semanticCommitTypeAll(chore)',
+
+    // A major waits on the Dependency Dashboard until it is ticked, rather
+    // than opening a pull request nobody asked for.
+    ':approveMajorUpdates',
+
+    // Peer ranges are a published contract, not a dependency to keep current.
+    ':disablePeerDependencies',
+
+    // Refreshes the whole lockfile monthly. `pnpm dedupe --check` re-resolves
+    // against the live registry, so a lockfile goes stale on its own as
+    // upstream publishes patches, with no change here at all.
+    ':maintainLockFilesMonthly',
+  ],
+
+  // `skip-changeset` is what the changeset gate reads. A bump changes what the
+  // repository builds with, never what it publishes, so there is no changelog
+  // entry to write. Both labels must exist — see the README.
   labels: ['dependencies', 'skip-changeset'],
 
-  // Rewrite the range in package.json too, not just the lockfile, so the
-  // manifest says what is actually installed.
+  // Move the declared range rather than only the lockfile, so `package.json`
+  // says what is actually installed.
   rangeStrategy: 'bump',
 
-  // One bump rewrites transitive versions as well; without a dedupe pass the
-  // lockfile keeps the old copies and `dedupe:check` fails the pull request.
+  // Run `pnpm dedupe` after updating, so what lands already satisfies the
+  // `audit · sherif · knip · dedupe` job.
   postUpdateOptions: ['pnpmDedupe'],
-
-  // pnpm refuses to install a release younger than its minimumReleaseAge, so a
-  // fresh publish would fail CI anyway. Waiting also sidesteps the window in
-  // which a compromised release is usually caught and unpublished. `strict`
-  // holds the pull request back until the age is met, instead of opening one
-  // that cannot go green yet.
-  minimumReleaseAge: '3 days',
-  internalChecksFilter: 'strict',
-
-  // GitHub's native auto-merge, with the only method the org rulesets allow.
-  automergeType: 'pr',
-  automergeStrategy: 'rebase',
-  platformAutomerge: true,
-
-  lockFileMaintenance: {
-    enabled: true,
-    automerge: true,
-    schedule: ['before 6am on monday'],
-  },
 
   packageRules: [
     {
-      description: 'One pull request for every patch and minor npm update.',
-      matchManagers: ['npm'],
+      // Patch and minor merge themselves once CI is green. `platformAutomerge`
+      // hands that to GitHub's own auto-merge, so it waits for the required
+      // `all checks` status.
       matchUpdateTypes: ['minor', 'patch'],
-      groupName: 'npm non-major dependencies',
-      groupSlug: 'npm-non-major',
       automerge: true,
+      platformAutomerge: true,
     },
     {
-      description: 'One pull request for every patch and minor GitHub Actions update.',
-      matchManagers: ['github-actions'],
-      matchUpdateTypes: ['minor', 'patch'],
-      groupName: 'github actions',
-      groupSlug: 'github-actions',
-      automerge: true,
-    },
-    {
-      description: 'typescript-eslint and the Astro checker lag a TypeScript major.',
+      // TypeScript 7 is held, not skipped: typescript-eslint declares its peer
+      // as `>=4.8.4 <6.1.0` and errors on sight of TS 7, which is the whole
+      // `lint` job. Written as a ceiling rather than an ignore so 6.x patches
+      // and minors still come through.
+      //
+      // Lift it by deleting this rule once typescript-eslint accepts TS 7.
       matchPackageNames: ['typescript'],
       allowedVersions: '<7',
-    },
-    {
-      description: 'engines.node is a promise to consumers, raised on purpose, never by a bot.',
-      matchDepTypes: ['engines'],
-      enabled: false,
     },
   ],
 }
