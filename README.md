@@ -6,17 +6,17 @@ breadth.
 
 ## What is in it
 
-| Piece              | Details                                                                                                                                                |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `packages/example` | Publishable ESM package built with tsdown; publint + attw + a pack smoke test                                                                          |
-| `packages/config`  | Shared tsdown preset (`@rxova/config/tsdown.base`), the one home of the build defaults                                                                 |
-| `packages/tooling` | `verify` (the pre-push gate), changeset gate, release-commit detection, pack smoke                                                                     |
-| `apps/docs`        | Astro Starlight, links validator, sitemap, deployed to GitHub Pages                                                                                    |
-| Quality            | TypeScript 6 strict, ESLint 10 + typescript-eslint, Prettier, Vitest 5 (95%/file), knip (unused files/exports/deps), sherif (one version per dep)      |
-| Hooks              | Husky: lint-staged + typecheck + tests on commit, commitlint, `verify` on push                                                                         |
-| Releases           | Changesets → version PR → npm with trusted publishing and provenance                                                                                   |
-| CI                 | Parallel jobs; tests on Node 22/24 × Linux/macOS/Windows; CodeQL; Codecov; one `all checks` gate                                                       |
-| Dependabot         | Weekly, one grouped PR per ecosystem, labelled `skip-changeset`; patch/minor updates auto-merge once `all checks` passes (`dependabot-auto-merge.yml`) |
+| Piece              | Details                                                                                                                                                    |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/example` | Publishable ESM package built with tsdown; publint + attw + a pack smoke test                                                                              |
+| `packages/config`  | Shared tsdown preset (`@rxova/config/tsdown.base`), the one home of the build defaults                                                                     |
+| `packages/tooling` | `verify` (the pre-push gate), changeset gate, release-commit detection, pack smoke                                                                         |
+| `apps/docs`        | Astro Starlight, links validator, sitemap, deployed to GitHub Pages                                                                                        |
+| Quality            | TypeScript 6 strict, ESLint 10 + typescript-eslint, Prettier, Vitest 5 (95%/file), knip (unused files/exports/deps), sherif (one version per dep)          |
+| Hooks              | Husky: lint-staged + typecheck + tests on commit, commitlint, `verify` on push                                                                             |
+| Releases           | Changesets → version PR → npm with trusted publishing and provenance                                                                                       |
+| CI                 | Parallel jobs; tests on Node 22/24 × Linux/macOS/Windows; CodeQL; Codecov; one `all checks` gate                                                           |
+| Renovate           | Weekly, grouped PRs labelled `skip-changeset`; patch/minor updates and lockfile maintenance auto-merge once `all checks` passes (`.github/renovate.json5`) |
 
 ## After creating a repository from this template
 
@@ -26,7 +26,7 @@ breadth.
    git mv packages/example packages/<name>   # then update "name" and "repository.directory"
    ```
 2. `pnpm install`
-3. Create the labels Dependabot and the changeset gate use (templates do not copy labels):
+3. Create the labels Renovate and the changeset gate use (templates do not copy labels):
    ```sh
    gh label create dependencies --color 0366d6 && gh label create skip-changeset --color ededed
    ```
