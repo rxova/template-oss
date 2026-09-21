@@ -28,4 +28,10 @@ export default defineConfig(
     files: ['**/*.{js,mjs,cjs}'],
     languageOptions: { globals: { ...globals.node } },
   },
+  {
+    // CommonJS by definition, so `require` is the only import form it has. The
+    // changeset changelog wrapper has to be CJS: changesets loads it with `require()`.
+    files: ['**/*.cjs'],
+    rules: { '@typescript-eslint/no-require-imports': 'off' },
+  },
 );

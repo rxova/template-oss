@@ -2,7 +2,7 @@
  * A change to a published package needs a changeset, or the release goes out
  * with an empty changelog and an unchanged version.
  *
- * Every directory under `packages/` publishes, except this tooling package.
+ * Every directory under `packages/` publishes, except tooling and config.
  * Docs, CI config and the apps are exempt: they ship nothing to npm.
  */
 import { execFileSync } from 'node:child_process';
@@ -17,7 +17,7 @@ export const gitDiff: Differ = (base, head) =>
     .filter(Boolean);
 
 /** Workspace packages that are never published. */
-export const UNPUBLISHED = ['packages/tooling/'];
+export const UNPUBLISHED = ['packages/tooling/', 'packages/config/'];
 
 /**
  * Whether the diff touches something that actually ships. Markdown and unit

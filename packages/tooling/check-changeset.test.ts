@@ -21,6 +21,7 @@ describe('touchesPackage', () => {
     'packages/example/src/index.test.ts',
     'packages/example/src/__tests__/fixture.ts',
     'packages/tooling/verify.ts',
+    'packages/config/tsdown.base.ts',
     'apps/docs/src/content/docs/index.mdx',
     '.github/workflows/ci.yml',
     'README.md',

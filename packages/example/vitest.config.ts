@@ -11,8 +11,7 @@ export default defineConfig({
       include: ['src/**/*.ts'],
       exclude: ['src/**/*.test.ts'],
       // Per file, so one well-tested module cannot carry an untested one.
-      // Raise these as the suite improves; lowering one to get a build green is
-      // exactly what overlock's COVERAGE_THRESHOLD_LOWERED rule reports.
+      // Raise these as the suite improves; never lower one to get a build green.
       thresholds: {
         perFile: true,
         statements: 95,

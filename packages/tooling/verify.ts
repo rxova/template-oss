@@ -14,6 +14,10 @@ export const STEPS: [name: string, command: string][] = [
   ['unit tests', 'pnpm exec turbo run test'],
   ['package exports', 'pnpm run check:exports'],
   ['pack smoke', 'pnpm run pack:smoke'],
+  ['dependency versions', 'pnpm run sherif:check'],
+  ['unused code', 'pnpm run knip:check'],
+  // Kept after the two above: `pnpm dedupe --check` removes the modules
+  // directory when CI is set, so a step after it runs without node_modules.
   ['dependency dedupe', 'pnpm exec turbo run //#dedupe:check'],
   ['audit', 'pnpm run audit:check'],
 ];
