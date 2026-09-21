@@ -8,7 +8,7 @@
     "url": "git+https://github.com/rxova/template-oss.git"
   },
   "type": "module",
-  "packageManager": "pnpm@11.27.1",
+  "packageManager": "pnpm@12.5.1",
   "engines": {
     "node": ">=22.13"
   },
