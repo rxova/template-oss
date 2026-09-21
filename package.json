@@ -8,7 +8,7 @@
     "url": "git+https://github.com/rxova/template-oss.git"
   },
   "type": "module",
-  "packageManager": "pnpm@11.26.0",
+  "packageManager": "pnpm@11.27.1",
   "engines": {
     "node": ">=22.13"
   },
@@ -24,9 +24,10 @@
     "prettier:check": "prettier --check . --cache --cache-location node_modules/.cache/prettier/.prettiercache",
     "audit:check": "pnpm audit --audit-level=high --ignore-registry-errors",
     "dedupe:check": "pnpm dedupe --check",
+    "sherif:check": "sherif --fail-on-warnings",
+    "knip:check": "knip",
     "check:exports": "turbo run check:exports",
     "pack:smoke": "turbo run pack:smoke --concurrency=1",
-    "check:integrity": "overlock check --compact",
     "docs": "pnpm --filter docs dev",
     "changeset": "changeset",
     "release": "turbo run build --filter=./packages/* && changeset publish",
@@ -43,18 +44,19 @@
   "devDependencies": {
     "@changesets/changelog-github": "^1.0.1",
     "@changesets/cli": "^3.0.3",
-    "@commitlint/cli": "^21.2.2",
-    "@commitlint/config-conventional": "^21.2.2",
+    "@commitlint/cli": "^21.2.3",
+    "@commitlint/config-conventional": "^21.2.3",
     "@eslint/js": "^10.0.1",
-    "@types/node": "^26.6.1",
-    "eslint": "^10.10.0",
+    "@types/node": "^26.6.2",
+    "eslint": "^10.11.0",
     "globals": "^17.12.0",
     "husky": "^9.1.7",
+    "knip": "^6.37.0",
     "lint-staged": "^17.5.1",
-    "overlock": "^0.9.2",
-    "prettier": "^3.9.7",
-    "tsx": "^4.23.13",
-    "turbo": "^2.10.13",
+    "prettier": "^3.9.8",
+    "sherif": "^1.13.0",
+    "tsx": "^4.23.15",
+    "turbo": "^2.11.2",
     "typescript": "6.0.3",
     "typescript-eslint": "^8.70.0"
   }

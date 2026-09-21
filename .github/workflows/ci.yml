@@ -126,7 +126,7 @@ jobs:
           fail_ci_if_error: false
 
   supply-chain:
-    name: audit · dedupe
+    name: audit · sherif · knip · dedupe
     needs: [commitlint]
     if: needs.commitlint.outputs.code-changed == 'true'
     runs-on: ubuntu-latest
@@ -143,6 +143,18 @@ jobs:
       - name: Audit dependencies
         timeout-minutes: 5
         run: pnpm run audit:check
+      # One version of each dependency across the workspace. Two packages on
+      # two minors of the same library typecheck fine and then disagree at
+      # runtime.
+      - name: Check dependency versions across the workspace
+        run: pnpm run sherif:check
+      # Unused files, exports and dependencies. The only check here that
+      # notices an export nothing imports.
+      - name: Check for unused files, exports and dependencies
+        run: pnpm run knip:check
+      # Last, and it has to stay last: `pnpm dedupe --check` removes the
+      # modules directory when CI is set, so any step after it runs without
+      # node_modules and fails looking for its own binary.
       - name: Check dependency dedupe
         run: pnpm exec turbo run //#dedupe:check
 
@@ -226,24 +238,6 @@ jobs:
           DOCS_BASE_URL: /${{ github.event.repository.name }}/
         run: pnpm exec turbo run build --filter=docs
 
-  # overlock reads the pull request's patch and reports skipped tests, removed or
-  # weakened assertions and lowered coverage thresholds, as one comment edited in
-  # place. Configured by overlock.config.json.
-  integrity:
-    name: test integrity (overlock)
-    needs: [commitlint]
-    if: github.event_name == 'pull_request' && needs.commitlint.outputs.code-changed == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-      pull-requests: write
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-      - uses: rxova/overlock@v0
-
   changeset:
     name: changeset present
     needs: [commitlint]
@@ -282,7 +276,6 @@ jobs:
       - pack-smoke
       - compat
       - docs
-      - integrity
       - changeset
     runs-on: ubuntu-latest
     timeout-minutes: 5

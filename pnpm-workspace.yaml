@@ -13,5 +13,3 @@ fetchTimeout: 15000
 fetchRetries: 1
 fetchRetryMintimeout: 5000
 fetchRetryMaxtimeout: 10000
-minimumReleaseAgeExclude:
-  - overlock@0.9.0

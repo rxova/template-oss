@@ -11,6 +11,8 @@ describe('STEPS', () => {
       'unit tests',
       'package exports',
       'pack smoke',
+      'dependency versions',
+      'unused code',
       'dependency dedupe',
       'audit',
     ]);
