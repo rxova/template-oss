@@ -211,16 +211,16 @@ describe('main', () => {
 
     it('passes a changeset that names one package', () => {
       const files = {
-        '/repo/package.json': manifest,
-        '/repo/.changeset/a.md': "---\n'@rxova/example': patch\n---\n\nFix.\n",
+        [join('/repo', 'package.json')]: manifest,
+        [join('/repo', '.changeset', 'a.md')]: "---\n'@rxova/example': patch\n---\n\nFix.\n",
       };
       expect(main(range, deps(changed, files))).toBe(0);
     });
 
     it('fails a changeset that names two, and says which', () => {
       const files = {
-        '/repo/package.json': manifest,
-        '/repo/.changeset/a.md': '---\n"a": patch\n"b": minor\n---\n',
+        [join('/repo', 'package.json')]: manifest,
+        [join('/repo', '.changeset', 'a.md')]: '---\n"a": patch\n"b": minor\n---\n',
       };
       expect(main(range, deps(changed, files))).toBe(1);
       expect(error).toHaveBeenCalledWith(expect.stringContaining('names 2 packages, expected 1'));
@@ -228,7 +228,7 @@ describe('main', () => {
   });
 
   it('reports a malformed config instead of throwing', () => {
-    const files = { '/repo/package.json': '{"tooling":{"changeset":1}}' };
+    const files = { [join('/repo', 'package.json')]: '{"tooling":{"changeset":1}}' };
     expect(main(range, deps([], files))).toBe(1);
     expect(error).toHaveBeenCalledWith(expect.stringContaining('tooling.changeset must be'));
   });

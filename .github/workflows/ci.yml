@@ -166,7 +166,9 @@ jobs:
       - name: Check dependency versions across the workspace
         run: pnpm run sherif:check
       # Unused files, exports and dependencies. The only check here that
-      # notices an export nothing imports.
+      # notices an export nothing imports. It loads every vitest and tsdown
+      # config, which import the built presets, so the script builds
+      # @rxova/tooling first.
       - name: Check for unused files, exports and dependencies
         run: pnpm run knip:check
       # Last, and it has to stay last: `pnpm dedupe --check` removes the

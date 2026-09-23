@@ -13,6 +13,8 @@ import {
 import type { Manifest, Shell, Workspace } from './pack-smoke.types.js';
 
 const SCRATCH = '/scratch';
+/** Where the workspace packages sit beside `/pkg`, spelled the way `join` spells it here. */
+const PARENT = join('/pkg', '..');
 
 /**
  * An in-memory workspace holding one package manifest. Listing the scratch
@@ -130,7 +132,7 @@ describe('packSmoke', () => {
       },
     });
     const listed = fs.list;
-    fs.list = (dir) => (dir === '/' ? ['config', 'core', 'pkg', 'empty'] : listed(dir));
+    fs.list = (dir) => (dir === PARENT ? ['config', 'core', 'pkg', 'empty'] : listed(dir));
     const calls: string[] = [];
     const sh: Shell = (command, args, cwd) => {
       calls.push(`${command} ${args.join(' ')} @ ${cwd}`);
@@ -142,7 +144,7 @@ describe('packSmoke', () => {
     expect(packSmoke({ pkgDir: '/pkg', sh, fs })).toContain('@scope/example@0.1.0 installs');
     expect(calls.slice(1, 4)).toEqual([
       `tar -xzf ${join(SCRATCH, 'scope-example-0.1.0.tgz')} -C ${SCRATCH} @ ${SCRATCH}`,
-      `npm pack --ignore-scripts --json --pack-destination ${SCRATCH} @ /core`,
+      `npm pack --ignore-scripts --json --pack-destination ${SCRATCH} @ ${join('/', 'core')}`,
       `npm pack --ignore-scripts --pack-destination ${SCRATCH} @ ${join(SCRATCH, 'package')}`,
     ]);
     const repacked = JSON.parse(
@@ -158,18 +160,18 @@ describe('packSmoke', () => {
     const manifest = { name: 'x', version: '1.0.0', dependencies: { y: 'workspace:*' } };
     const extra = { [join(SCRATCH, 'package', 'package.json')]: JSON.stringify(manifest) };
     const { fs } = memory(manifest, { extra });
-    fs.list = (dir) => (dir === '/' ? [] : ['x-1.0.0.tgz']);
+    fs.list = (dir) => (dir === PARENT ? [] : ['x-1.0.0.tgz']);
     expect(() => packSmoke({ pkgDir: '/pkg', sh: npm(), fs })).toThrow(
       'no workspace package named y beside /pkg',
     );
     const other = memory(manifest, {
       extra: { ...extra, [join('/', 'y', 'package.json')]: JSON.stringify({ name: 'y' }) },
     });
-    other.fs.list = (dir) => (dir === '/' ? ['y'] : ['x-1.0.0.tgz']);
+    other.fs.list = (dir) => (dir === PARENT ? ['y'] : ['x-1.0.0.tgz']);
     const empty: Shell = (command, args, cwd) =>
       args.includes('--json') ? '[]' : npm()(command, args, cwd);
     expect(() => packSmoke({ pkgDir: '/pkg', sh: empty, fs: other.fs })).toThrow(
-      'npm pack produced no tarball for /y',
+      `npm pack produced no tarball for ${join('/', 'y')}`,
     );
   });
 

@@ -25,7 +25,7 @@
     "audit:check": "pnpm audit --audit-level=high --ignore-registry-errors",
     "dedupe:check": "pnpm dedupe --check",
     "sherif:check": "sherif --fail-on-warnings",
-    "knip:check": "knip",
+    "knip:check": "turbo run build --filter=@rxova/tooling --output-logs=errors-only && knip",
     "check:exports": "turbo run check:exports",
     "pack:smoke": "turbo run pack:smoke --concurrency=1",
     "docs": "pnpm --filter docs dev",
