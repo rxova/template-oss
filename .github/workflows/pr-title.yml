@@ -21,6 +21,9 @@ concurrency:
 jobs:
   title:
     name: commit message (PR title)
+    # `changes.title` is only present when the edit touched the title, so a
+    # body edit costs no runner at all.
+    if: github.event.action != 'edited' || github.event.changes.title
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
