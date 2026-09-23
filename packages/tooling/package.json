@@ -1,18 +1,113 @@
 {
-  "name": "@repo/tooling",
+  "name": "@rxova/tooling",
   "version": "0.0.0",
-  "private": true,
+  "description": "Repo maintenance for rxova monorepos: the verify gate, the changeset gate, pack smoke, llms.txt checks, and the shared build, test, lint and commit presets.",
+  "license": "MIT",
+  "author": "Jonatan Kruszewski",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rxova/template-oss.git",
+    "directory": "packages/tooling"
+  },
+  "homepage": "https://github.com/rxova/template-oss/tree/main/packages/tooling#readme",
+  "bugs": "https://github.com/rxova/template-oss/issues",
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
-  "description": "Repo scripts: the verify gate, the changeset gate, release-commit detection, the Node floor and the pack smoke test.",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "rxova-tooling": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./tsdown": {
+      "types": "./dist/tsdown.d.ts",
+      "default": "./dist/tsdown.js"
+    },
+    "./vitest": {
+      "types": "./dist/vitest.d.ts",
+      "default": "./dist/vitest.js"
+    },
+    "./eslint": {
+      "types": "./presets/eslint.d.ts",
+      "default": "./presets/eslint.js"
+    },
+    "./commitlint": {
+      "types": "./presets/commitlint.d.ts",
+      "default": "./presets/commitlint.js"
+    },
+    "./prettier": "./presets/prettier.json",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "presets"
+  ],
+  "engines": {
+    "node": ">=22.13"
+  },
   "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch",
     "test": "vitest run --coverage",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "check:exports": "publint --strict && attw --pack . --profile esm-only",
+    "pack:smoke": "node --import tsx src/pack-smoke/pack-smoke.ts"
+  },
+  "peerDependencies": {
+    "@commitlint/config-conventional": ">=19",
+    "@eslint/js": ">=9",
+    "eslint": ">=9",
+    "globals": ">=15",
+    "tsdown": ">=0.15",
+    "typescript": ">=5.5",
+    "typescript-eslint": ">=8",
+    "vitest": ">=3"
+  },
+  "peerDependenciesMeta": {
+    "@commitlint/config-conventional": {
+      "optional": true
+    },
+    "@eslint/js": {
+      "optional": true
+    },
+    "eslint": {
+      "optional": true
+    },
+    "globals": {
+      "optional": true
+    },
+    "tsdown": {
+      "optional": true
+    },
+    "typescript": {
+      "optional": true
+    },
+    "typescript-eslint": {
+      "optional": true
+    },
+    "vitest": {
+      "optional": true
+    }
   },
   "devDependencies": {
-    "@repo/config": "workspace:*",
+    "@arethetypeswrong/cli": "^0.18.5",
+    "@eslint/js": "^10.0.1",
     "@types/node": "^26.6.2",
     "@vitest/coverage-v8": "^5.0.1",
+    "eslint": "^10.11.0",
+    "globals": "^17.12.0",
+    "publint": "^0.3.24",
+    "tsdown": "^0.23.0",
+    "tsx": "^4.23.15",
     "typescript": "6.0.3",
+    "typescript-eslint": "^8.70.0",
     "vitest": "^5.0.1"
   }
 }

@@ -1,4 +1,5 @@
-module.exports = {
+// Unbuilt on purpose: the commit-msg hook loads this before anything is built.
+export default {
   extends: ['@commitlint/config-conventional'],
   rules: {
     // Length is a review concern, not a machine one.

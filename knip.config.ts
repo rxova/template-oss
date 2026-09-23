@@ -16,8 +16,8 @@ export default {
   treatConfigHintsAsErrors: true,
   workspaces: {
     'packages/tooling': {
-      // Repo scripts (not their tests or types), invoked by name from
-      // package.json and CI, never imported.
+      // Repo scripts (not their tests or types). This repository runs them
+      // from source by path, in package.json and CI, as well as through the bin.
       entry: ['src/*/*.ts', '!src/**/*.{test,types}.ts'],
     },
   },

@@ -11,19 +11,30 @@ import {
   labelsOf,
   main,
   SKIP_LABEL,
+  packagesNamed,
   publishedDirs,
-  REPO_ROOT,
+  singlePackageProblems,
   touchesPackage,
 } from './check-changeset.js';
+
+const REPO_ROOT = fileURLToPath(new URL('../../../../', import.meta.url));
 
 const PUBLISHED = ['example'];
 
 describe('publishedDirs', () => {
-  it('finds the non-private packages of this repository, and only those', () => {
-    const dirs = publishedDirs(REPO_ROOT);
-    expect(dirs).toContain('example');
-    expect(dirs).not.toContain('tooling');
-    expect(dirs).not.toContain('config');
+  it('finds the non-private packages of this repository', () => {
+    expect(publishedDirs(REPO_ROOT).sort()).toEqual(['example', 'toolbox', 'tooling']);
+  });
+
+  it('leaves a private package out', () => {
+    const root = mkdtempSync(join(tmpdir(), 'check-changeset-'));
+    try {
+      mkdirSync(join(root, 'packages', 'internal'), { recursive: true });
+      writeFileSync(join(root, 'packages', 'internal', 'package.json'), '{"private":true}');
+      expect(publishedDirs(root)).toEqual([]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 
   it('skips a directory without a manifest', () => {
@@ -37,6 +48,10 @@ describe('publishedDirs', () => {
       rmSync(root, { recursive: true, force: true });
     }
   });
+
+  it('is empty where there is no packages directory', () => {
+    expect(publishedDirs(join(tmpdir(), 'no-such-repo'))).toEqual([]);
+  });
 });
 
 describe('touchesPackage', () => {
@@ -48,6 +63,9 @@ describe('touchesPackage', () => {
     'packages/example/README.md',
     'packages/example/src/index.test.ts',
     'packages/example/src/__tests__/fixture.ts',
+    'packages/example/src/view.test.tsx',
+    'packages/example/src/__fixtures__/patch.diff',
+    'packages/example/e2e/cli.ts',
     'packages/example-two/src/index.ts',
     'packages/tooling/src/verify/verify.ts',
     'packages/config/tsdown.base.ts',
@@ -105,16 +123,31 @@ describe('check', () => {
   });
 
   it('asks for nothing when the pull request carries the label', () => {
-    const verdict = check(['packages/example/package.json'], PUBLISHED, [
-      'dependencies',
-      SKIP_LABEL,
-    ]);
+    const verdict = check(['packages/example/package.json'], PUBLISHED, {
+      labels: ['dependencies', SKIP_LABEL],
+    });
     expect(verdict.exitCode).toBe(0);
     expect(verdict.message).toContain(SKIP_LABEL);
   });
 
-  it('is not satisfied by some other label', () => {
-    expect(check(['packages/example/src/index.ts'], PUBLISHED, ['dependencies']).exitCode).toBe(1);
+  it('asks for nothing when the title carries the marker', () => {
+    const verdict = check(['packages/example/package.json'], PUBLISHED, {
+      title: `chore: bump [${SKIP_LABEL}]`,
+    });
+    expect(verdict.exitCode).toBe(0);
+    expect(verdict.message).toContain('title');
+  });
+
+  it('is not satisfied by some other label, or the bare word in the title', () => {
+    const changed = ['packages/example/src/index.ts'];
+    expect(check(changed, PUBLISHED, { labels: ['dependencies'] }).exitCode).toBe(1);
+    expect(check(changed, PUBLISHED, { title: SKIP_LABEL }).exitCode).toBe(1);
+  });
+
+  it('does not count a changeset the pull request deletes', () => {
+    const changed = ['packages/example/src/index.ts', '.changeset/old.md'];
+    const present = ['packages/example/src/index.ts'];
+    expect(check(changed, PUBLISHED, {}, { present }).exitCode).toBe(1);
   });
 });
 
@@ -138,6 +171,14 @@ describe('main', () => {
     error.mockClear();
   });
 
+  const range = { BASE_SHA: 'aaa', HEAD_SHA: 'bbb' };
+  const deps = (changed: string[], files: Record<string, string> = {}) => ({
+    root: '/repo',
+    published: PUBLISHED,
+    diff: vi.fn(() => changed),
+    read: (file: string) => files[file],
+  });
+
   it('refuses to guess when the range is missing', () => {
     expect(main({})).toBe(1);
     expect(main({ BASE_SHA: 'a' })).toBe(1);
@@ -145,24 +186,68 @@ describe('main', () => {
     expect(error).toHaveBeenCalledWith('check-changeset: BASE_SHA and HEAD_SHA must be set');
   });
 
-  it('asks for the diff of exactly the range it was given', () => {
-    const diff = vi.fn(() => ['packages/tooling/src/verify/verify.ts']);
-    expect(main({ BASE_SHA: 'aaa', HEAD_SHA: 'bbb' }, { diff })).toBe(0);
-    expect(diff).toHaveBeenCalledWith('aaa', 'bbb');
+  it('asks for the diff of exactly the range it was given, with and without deletions', () => {
+    const options = deps(['packages/tooling/src/verify/verify.ts']);
+    expect(main(range, options)).toBe(0);
+    expect(options.diff).toHaveBeenCalledWith('aaa', 'bbb');
+    expect(options.diff).toHaveBeenCalledWith('aaa', 'bbb', { existing: true });
     expect(log).toHaveBeenCalledWith(expect.stringContaining('no publishable change'));
   });
 
   it('reports a missing changeset on stderr and exits 1', () => {
-    const diff = () => ['packages/example/src/index.ts'];
-    expect(main({ BASE_SHA: 'aaa', HEAD_SHA: 'bbb' }, { diff })).toBe(1);
+    expect(main(range, deps(['packages/example/src/index.ts']))).toBe(1);
     expect(error).toHaveBeenCalledWith(expect.stringContaining('adds no changeset'));
   });
 
-  it('reads the label from the environment the workflow sets', () => {
-    const diff = () => ['packages/example/package.json'];
-    const env = { BASE_SHA: 'aaa', HEAD_SHA: 'bbb', PR_LABELS: `dependencies,${SKIP_LABEL}` };
-    expect(main(env, { diff })).toBe(0);
-    expect(log).toHaveBeenCalledWith(expect.stringContaining(SKIP_LABEL));
+  it('reads the label and the title from the environment the workflow sets', () => {
+    const options = deps(['packages/example/package.json']);
+    expect(main({ ...range, PR_LABELS: `dependencies,${SKIP_LABEL}` }, options)).toBe(0);
+    expect(main({ ...range, PR_TITLE: `[${SKIP_LABEL}] bump` }, options)).toBe(0);
+  });
+
+  describe('with singlePackage set', () => {
+    const manifest = JSON.stringify({ tooling: { changeset: { singlePackage: true } } });
+    const changed = ['packages/example/src/index.ts', '.changeset/a.md'];
+
+    it('passes a changeset that names one package', () => {
+      const files = {
+        '/repo/package.json': manifest,
+        '/repo/.changeset/a.md': "---\n'@rxova/example': patch\n---\n\nFix.\n",
+      };
+      expect(main(range, deps(changed, files))).toBe(0);
+    });
+
+    it('fails a changeset that names two, and says which', () => {
+      const files = {
+        '/repo/package.json': manifest,
+        '/repo/.changeset/a.md': '---\n"a": patch\n"b": minor\n---\n',
+      };
+      expect(main(range, deps(changed, files))).toBe(1);
+      expect(error).toHaveBeenCalledWith(expect.stringContaining('names 2 packages, expected 1'));
+    });
+  });
+
+  it('reports a malformed config instead of throwing', () => {
+    const files = { '/repo/package.json': '{"tooling":{"changeset":1}}' };
+    expect(main(range, deps([], files))).toBe(1);
+    expect(error).toHaveBeenCalledWith(expect.stringContaining('tooling.changeset must be'));
+  });
+});
+
+describe('packagesNamed', () => {
+  it.each([
+    ["---\n'@scope/a': patch\n---\n", 1],
+    ['---\n"a": minor # why\n"b": major\n---', 2],
+    ['---\n---\n', 0],
+    ['no frontmatter', 0],
+  ])('counts %j as %d', (body, count) => {
+    expect(packagesNamed(body)).toBe(count);
+  });
+});
+
+describe('singlePackageProblems', () => {
+  it('flags an unreadable file', () => {
+    expect(singlePackageProblems(['x.md'], () => undefined)).toEqual(['  x.md: could not be read']);
   });
 });
 
@@ -170,6 +255,7 @@ describe('gitDiff', () => {
   it('lists the files an empty range changed — none', () => {
     const head = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
     expect(gitDiff(head, head)).toEqual([]);
+    expect(gitDiff(head, head, { existing: true })).toEqual([]);
   });
 });
 

@@ -1,6 +1,7 @@
 /**
- * Packs the real tarball, installs it into a scratch project, imports it the
- * way a consumer's Node would, and runs every bin it declares.
+ * Packs the real tarball, installs it into a scratch project, loads it the way
+ * a consumer's Node would — once through `import`, once through `require` — and
+ * runs every bin it declares.
  *
  * This is the only check that catches a `files` entry that dropped dist, an
  * exports map that resolves for a bundler but not for plain Node, or a bin that
@@ -9,10 +10,16 @@
  * reader opens in `node_modules` beside dist: the README, the license, and
  * whatever else `files` lists.
  *
- * Run from a package directory (`pnpm run pack:smoke` in each package). The
- * commands and the scratch directory are injected rather than reached for
- * directly, so the sequence — and every way it is allowed to fail — can be
- * tested without spending a minute on a real pack and install.
+ * `npm pack` keeps a `workspace:` dependency as written, which no npm install
+ * resolves. So each one is packed too, and the package's tarball is repacked
+ * with those dependencies pointing at their tarballs: what `pnpm publish` does
+ * with the published versions, done with npm alone.
+ *
+ * Run from a package directory (`pnpm run pack:smoke` in each package). It packs
+ * with `--ignore-scripts`, so dist has to be built first: Turbo's `dependsOn`
+ * does that, and CI builds before it runs this on the oldest Node `engines`
+ * allows. The commands and the scratch directory are injected, so the sequence
+ * and every way it can fail are tested without a real pack and install.
  */
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -52,10 +59,64 @@ export const shippedFiles = (manifest: Manifest): string[] => [
 /** The probe a consumer's Node would run, with no bundler in the way. */
 export const probeSource = (name: string): string =>
   [
-    `const mod = await import(${JSON.stringify(name)});`,
-    'if (Object.keys(mod).length === 0) throw new Error("the entry exports nothing");',
+    "import { createRequire } from 'node:module';",
+    `const esm = await import(${JSON.stringify(name)});`,
+    `const cjs = createRequire(import.meta.url)(${JSON.stringify(name)});`,
+    'if (Object.keys(esm).length === 0) throw new Error("the import entry exports nothing");',
+    'if (Object.keys(cjs).length === 0) throw new Error("the require entry exports nothing");',
     "console.log('ok');",
   ].join('\n');
+
+const WORKSPACE = 'workspace:';
+
+/** The directory beside `pkgDir` holding the workspace package `name`. */
+const workspaceDir = (pkgDir: string, name: string, fs: Workspace): string => {
+  const parent = join(pkgDir, '..');
+  for (const dir of fs.list(parent)) {
+    try {
+      const { name: found } = JSON.parse(fs.read(join(parent, dir, 'package.json'))) as Manifest;
+      if (found === name) return join(parent, dir);
+    } catch {
+      // Not a package: no manifest, or not JSON.
+    }
+  }
+  throw new Error(`no workspace package named ${name} beside ${pkgDir}`);
+};
+
+/** Packs `dir` into `destination` and returns the tarball's path. */
+const packInto = (dir: string, destination: string, sh: Shell): string => {
+  const [packed] = JSON.parse(
+    sh('npm', ['pack', '--ignore-scripts', '--json', '--pack-destination', destination], dir),
+  ) as { filename: string }[];
+  if (packed === undefined) throw new Error(`npm pack produced no tarball for ${dir}`);
+  return join(destination, packed.filename);
+};
+
+/**
+ * Packs each `workspace:` dependency, then repacks `tarball` with those
+ * dependencies pointing at their tarballs. Leaves a package without one alone.
+ */
+const resolveWorkspaceDeps = (
+  pkgDir: string,
+  manifest: Manifest,
+  tarball: string,
+  scratch: string,
+  { sh, fs }: { sh: Shell; fs: Workspace },
+): void => {
+  const local = Object.entries(manifest.dependencies ?? {}).filter(([, spec]) =>
+    spec.startsWith(WORKSPACE),
+  );
+  if (local.length === 0) return;
+  sh('tar', ['-xzf', tarball, '-C', scratch], scratch);
+  const unpacked = join(scratch, 'package');
+  const packed = JSON.parse(fs.read(join(unpacked, 'package.json'))) as Manifest;
+  const dependencies = { ...packed.dependencies };
+  for (const [name] of local) {
+    dependencies[name] = `file:${packInto(workspaceDir(pkgDir, name, fs), scratch, sh)}`;
+  }
+  fs.write(join(unpacked, 'package.json'), JSON.stringify({ ...packed, dependencies }, null, 2));
+  sh('npm', ['pack', '--ignore-scripts', '--pack-destination', scratch], unpacked);
+};
 
 /**
  * Runs the whole smoke test and returns the line to print. Throws on any step
@@ -74,9 +135,10 @@ export const packSmoke = ({
   const manifest = JSON.parse(fs.read(join(pkgDir, 'package.json'))) as Manifest;
   const scratch = fs.make();
   try {
-    sh('npm', ['pack', '--pack-destination', scratch], pkgDir);
-    const tarball = fs.list(scratch).find((f) => f.endsWith('.tgz'));
-    if (!tarball) throw new Error('npm pack produced no tarball');
+    sh('npm', ['pack', '--ignore-scripts', '--pack-destination', scratch], pkgDir);
+    const tarball = fs.list(scratch).find((file) => file.endsWith('.tgz'));
+    if (tarball === undefined) throw new Error('npm pack produced no tarball');
+    resolveWorkspaceDeps(pkgDir, manifest, join(scratch, tarball), scratch, { sh, fs });
 
     fs.write(join(scratch, 'package.json'), JSON.stringify({ name: 'scratch', private: true }));
     sh('npm', ['install', '--no-audit', '--no-fund', join(scratch, tarball)], scratch);
@@ -99,7 +161,7 @@ export const packSmoke = ({
     const probeOut = sh('node', [probe], scratch).trim();
     if (probeOut !== 'ok') throw new Error(`probe failed: ${probeOut}`);
 
-    return `pack:smoke ok — ${manifest.name}@${manifest.version} installs and imports from a tarball`;
+    return `pack:smoke ok — ${manifest.name}@${manifest.version} installs, imports and requires from a tarball`;
   } finally {
     fs.remove(scratch);
   }

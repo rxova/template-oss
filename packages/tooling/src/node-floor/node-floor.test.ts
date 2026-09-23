@@ -141,7 +141,9 @@ describe('main', () => {
 describe('workspace', () => {
   it('lists and reads real files', () => {
     expect(workspace.list(here)).toContain('node-floor.ts');
-    expect(workspace.read(join(here, '..', '..', 'package.json'))).toContain('"private": true');
+    expect(workspace.read(join(here, '..', '..', 'package.json'))).toContain(
+      '"name": "@rxova/tooling"',
+    );
   });
 
   it('treats a missing directory or file as empty rather than throwing', () => {

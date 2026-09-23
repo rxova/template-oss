@@ -1,3 +1,3 @@
-import { baseVitestConfig } from '@repo/config/vitest.base';
+import { baseVitestConfig } from '@rxova/tooling/vitest';
 
 export default baseVitestConfig();

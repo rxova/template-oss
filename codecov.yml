@@ -22,6 +22,5 @@ flag_management:
 
 ignore:
   - 'apps/**'
-  - 'packages/tooling/**'
   - '**/*.test.ts'
   - '**/__tests__/**'

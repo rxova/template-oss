@@ -18,3 +18,22 @@ describe('isEntry', () => {
     expect(isEntry(script, '')).toBe(false);
   });
 });
+
+describe('isEntry through a symlink', () => {
+  it('follows the link an installed bin is run through', async () => {
+    const { mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } =
+      await import('node:fs');
+    const { tmpdir } = await import('node:os');
+    const { join } = await import('node:path');
+    const dir = realpathSync(mkdtempSync(join(tmpdir(), 'entry-')));
+    try {
+      const target = join(dir, 'cli.js');
+      const link = join(dir, 'bin');
+      writeFileSync(target, '');
+      symlinkSync(target, link);
+      expect(isEntry(pathToFileURL(target).href, link)).toBe(true);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});

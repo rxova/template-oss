@@ -13,4 +13,5 @@ export interface Manifest {
   version: string;
   files?: string[];
   bin?: string | Record<string, string>;
+  dependencies?: Record<string, string>;
 }

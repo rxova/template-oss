@@ -10,6 +10,10 @@ import type { UserConfig } from 'tsdown';
  * `fixedExtension` stays off: `.js` / `.d.ts`, matching the exports map, rather
  * than `.mjs` / `.d.mts`.
  *
+ * A package that still ships CommonJS, or runs in browsers, overrides the
+ * fields that differ — `format: ['esm', 'cjs']`, `platform: 'neutral'`,
+ * `target: 'es2020'` — rather than keeping a preset of its own.
+ *
  * Entries are passed per package as an object, never an array. An array makes
  * the output paths depend on an inferred common base dir, and a different
  * inference silently renames the files the exports map points at.

@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // The DOM lib is here so `typeof document` type-checks; Node's types for the
+    // tests, which run in Node. The build targets `neutral`, and nothing in the
+    // source may reach for either platform without a guard.
+    "lib": ["ES2023", "DOM"],
+    "types": ["node"]
+  },
+  "include": ["src"]
+}

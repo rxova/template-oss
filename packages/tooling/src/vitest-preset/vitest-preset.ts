@@ -1,4 +1,5 @@
 import { defineConfig, type ViteUserConfig } from 'vitest/config';
+import type { BaseVitestOptions } from './vitest-preset.types.js';
 
 /**
  * The one home of the coverage thresholds.
@@ -24,18 +25,11 @@ export const COVERAGE_THRESHOLDS = {
  * thresholds cannot see, so keep them to re-exports and types.
  */
 const BASE_EXCLUSIONS = [
-  'src/**/*.test.ts',
-  'src/**/*.fixtures.ts',
+  'src/**/*.test.{ts,tsx}',
+  'src/**/*.fixtures.{ts,tsx}',
   'src/**/*.types.ts',
   'src/index.ts',
 ] as const;
-
-export interface BaseVitestOptions {
-  /** Test discovery globs. Defaults to `src/**\/*.test.ts`. */
-  readonly include?: readonly string[];
-  /** Extra coverage exclusions. Each one needs a reason at its call site. */
-  readonly exclude?: readonly string[];
-}
 
 /**
  * A package's Vitest config, from the shared preset. Every `vitest.config.ts`
@@ -43,18 +37,19 @@ export interface BaseVitestOptions {
  * than a sweep that misses a package.
  */
 export const baseVitestConfig = ({
-  include = ['src/**/*.test.ts'],
+  environment = 'node',
+  include = ['src/**/*.test.ts', 'src/**/*.test.tsx'],
   exclude = [],
+  reporter = ['text', 'lcov'],
 }: BaseVitestOptions = {}): ViteUserConfig =>
   defineConfig({
     test: {
-      environment: 'node',
+      environment,
       include: [...include],
       coverage: {
         provider: 'v8',
-        // `text` for a human reading CI logs, `lcov` for the coverage service.
-        reporter: ['text', 'lcov'],
-        include: ['src/**/*.ts'],
+        reporter: [...reporter],
+        include: ['src/**/*.{ts,tsx}'],
         exclude: [...BASE_EXCLUSIONS, ...exclude],
         thresholds: { ...COVERAGE_THRESHOLDS },
       },

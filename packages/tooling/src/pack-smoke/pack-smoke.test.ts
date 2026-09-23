@@ -10,22 +10,35 @@ import {
   shippedFiles,
   workspace,
 } from './pack-smoke.js';
-import type { Shell, Workspace } from './pack-smoke.types.js';
+import type { Manifest, Shell, Workspace } from './pack-smoke.types.js';
 
 const SCRATCH = '/scratch';
 
-/** An in-memory workspace holding one package manifest. */
+/**
+ * An in-memory workspace holding one package manifest. Listing the scratch
+ * directory shows the tarball; listing anything else shows the installed package.
+ */
 const memory = (
-  manifest: object,
-  { tarball = true, installed = ['LICENSE', 'README.md', 'dist', 'package.json'] } = {},
+  manifest: Manifest,
+  {
+    tarball = true,
+    installed = ['LICENSE', 'README.md', 'dist', 'package.json'],
+    extra = {},
+  }: { tarball?: boolean; installed?: string[]; extra?: Record<string, string> } = {},
 ) => {
-  const files = new Map<string, string>([[join('/pkg', 'package.json'), JSON.stringify(manifest)]]);
+  const files = new Map<string, string>([
+    [join('/pkg', 'package.json'), JSON.stringify(manifest)],
+    ...Object.entries(extra),
+  ]);
   const removed: string[] = [];
   const fs: Workspace = {
     make: () => SCRATCH,
-    list: (dir) =>
-      dir.includes('node_modules') ? installed : tarball ? ['scope-example-0.1.0.tgz'] : [],
-    read: (file) => files.get(file) ?? '',
+    list: (dir) => (dir === SCRATCH ? (tarball ? ['scope-example-0.1.0.tgz'] : []) : installed),
+    read: (file) => {
+      const contents = files.get(file);
+      if (contents === undefined) throw new Error(`ENOENT: ${file}`);
+      return contents;
+    },
     write: (file, contents) => void files.set(file, contents),
     remove: (dir) => void removed.push(dir),
   };
@@ -75,8 +88,10 @@ describe('shippedFiles', () => {
 });
 
 describe('probeSource', () => {
-  it('imports the package by name through its exports map', () => {
-    expect(probeSource('@scope/example')).toContain('await import("@scope/example")');
+  it('imports and requires the package by name through its exports map', () => {
+    const source = probeSource('@scope/example');
+    expect(source).toContain('await import("@scope/example")');
+    expect(source).toContain('createRequire(import.meta.url)("@scope/example")');
   });
 });
 
@@ -90,7 +105,7 @@ describe('packSmoke', () => {
     };
 
     expect(packSmoke({ pkgDir: '/pkg', sh, fs })).toBe(
-      'pack:smoke ok — @scope/example@0.1.0 installs and imports from a tarball',
+      'pack:smoke ok — @scope/example@0.1.0 installs, imports and requires from a tarball',
     );
     expect(calls).toEqual([
       'npm pack @ /pkg',
@@ -99,6 +114,63 @@ describe('packSmoke', () => {
     ]);
     expect(files.get(join(SCRATCH, 'probe.mjs'))).toContain('@scope/example');
     expect(removed).toEqual([SCRATCH]);
+  });
+
+  it('packs each workspace dependency and repacks the package pointing at it', () => {
+    const manifest = {
+      name: '@scope/example',
+      version: '0.1.0',
+      dependencies: { '@scope/core': 'workspace:^', zod: '^4.0.0' },
+    };
+    const { fs, files } = memory(manifest, {
+      extra: {
+        [join(SCRATCH, 'package', 'package.json')]: JSON.stringify(manifest),
+        [join('/', 'config', 'package.json')]: 'not json',
+        [join('/', 'core', 'package.json')]: JSON.stringify({ name: '@scope/core' }),
+      },
+    });
+    const listed = fs.list;
+    fs.list = (dir) => (dir === '/' ? ['config', 'core', 'pkg', 'empty'] : listed(dir));
+    const calls: string[] = [];
+    const sh: Shell = (command, args, cwd) => {
+      calls.push(`${command} ${args.join(' ')} @ ${cwd}`);
+      return args.includes('--json')
+        ? JSON.stringify([{ filename: 'scope-core-0.0.0.tgz' }])
+        : npm()(command, args, cwd);
+    };
+
+    expect(packSmoke({ pkgDir: '/pkg', sh, fs })).toContain('@scope/example@0.1.0 installs');
+    expect(calls.slice(1, 4)).toEqual([
+      `tar -xzf ${join(SCRATCH, 'scope-example-0.1.0.tgz')} -C ${SCRATCH} @ ${SCRATCH}`,
+      `npm pack --ignore-scripts --json --pack-destination ${SCRATCH} @ /core`,
+      `npm pack --ignore-scripts --pack-destination ${SCRATCH} @ ${join(SCRATCH, 'package')}`,
+    ]);
+    const repacked = JSON.parse(
+      files.get(join(SCRATCH, 'package', 'package.json')) ?? '',
+    ) as Manifest;
+    expect(repacked.dependencies).toEqual({
+      '@scope/core': `file:${join(SCRATCH, 'scope-core-0.0.0.tgz')}`,
+      zod: '^4.0.0',
+    });
+  });
+
+  it('fails on a workspace dependency with no package beside it, or no tarball', () => {
+    const manifest = { name: 'x', version: '1.0.0', dependencies: { y: 'workspace:*' } };
+    const extra = { [join(SCRATCH, 'package', 'package.json')]: JSON.stringify(manifest) };
+    const { fs } = memory(manifest, { extra });
+    fs.list = (dir) => (dir === '/' ? [] : ['x-1.0.0.tgz']);
+    expect(() => packSmoke({ pkgDir: '/pkg', sh: npm(), fs })).toThrow(
+      'no workspace package named y beside /pkg',
+    );
+    const other = memory(manifest, {
+      extra: { ...extra, [join('/', 'y', 'package.json')]: JSON.stringify({ name: 'y' }) },
+    });
+    other.fs.list = (dir) => (dir === '/' ? ['y'] : ['x-1.0.0.tgz']);
+    const empty: Shell = (command, args, cwd) =>
+      args.includes('--json') ? '[]' : npm()(command, args, cwd);
+    expect(() => packSmoke({ pkgDir: '/pkg', sh: empty, fs: other.fs })).toThrow(
+      'npm pack produced no tarball for /y',
+    );
   });
 
   it('runs every bin the package declares', () => {

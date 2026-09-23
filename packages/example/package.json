@@ -41,7 +41,7 @@
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.5",
-    "@repo/config": "workspace:*",
+    "@rxova/tooling": "workspace:*",
     "@types/node": "^26.6.2",
     "@vitest/coverage-v8": "^5.0.1",
     "publint": "^0.3.24",
