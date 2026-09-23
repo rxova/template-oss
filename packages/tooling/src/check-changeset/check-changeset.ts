@@ -2,33 +2,43 @@
  * A change to a published package needs a changeset, or the release goes out
  * with an empty changelog and an unchanged version.
  *
- * Every directory under `packages/` publishes, except tooling and config.
- * Docs, CI config and the apps are exempt: they ship nothing to npm.
+ * A published package is a directory under `packages/` whose manifest is not
+ * private, read from the manifests rather than listed here, so a new package is
+ * covered the moment it exists. Docs, CI config, the apps and the private
+ * packages reach no one who installs, so none of those ask for a changeset.
  */
 import { execFileSync } from 'node:child_process';
-import { isEntry } from './entry.js';
-
-/** How the range is read. Injected so the rule can be tested without a repo. */
-export type Differ = (base: string, head: string) => string[];
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { isEntry } from '../entry/entry.js';
+import type { Differ, Manifest, Verdict } from './check-changeset.types.js';
 
 export const gitDiff: Differ = (base, head) =>
   execFileSync('git', ['diff', '--name-only', `${base}...${head}`], { encoding: 'utf8' })
     .split('\n')
     .filter(Boolean);
 
-/** Workspace packages that are never published. */
-export const UNPUBLISHED = ['packages/tooling/', 'packages/config/'];
+/** Four levels up from `packages/tooling/src/check-changeset`, wherever the script is run from. */
+export const REPO_ROOT = fileURLToPath(new URL('../../../../', import.meta.url));
+
+/** The directory names under `packages/` whose manifest is not private. */
+export const publishedDirs = (root: string): string[] =>
+  readdirSync(join(root, 'packages')).filter((dir) => {
+    const manifest = join(root, 'packages', dir, 'package.json');
+    if (!existsSync(manifest)) return false;
+    return (JSON.parse(readFileSync(manifest, 'utf8')) as Manifest).private !== true;
+  });
 
 /**
- * Whether the diff touches something that actually ships. Markdown and unit
- * tests inside a package are excluded: neither reaches the tarball, so neither
- * needs a changelog entry.
+ * Whether the diff touches something a published package ships. Markdown and
+ * unit tests inside a package are excluded: neither reaches the tarball, so
+ * neither needs a changelog entry. `published` holds directory names.
  */
-export const touchesPackage = (changed: string[]): boolean =>
+export const touchesPackage = (changed: string[], published: string[]): boolean =>
   changed.some(
     (file) =>
-      file.startsWith('packages/') &&
-      !UNPUBLISHED.some((dir) => file.startsWith(dir)) &&
+      published.some((dir) => file.startsWith(`packages/${dir}/`)) &&
       !file.endsWith('.md') &&
       !file.includes('/__tests__/') &&
       !file.endsWith('.test.ts'),
@@ -56,10 +66,8 @@ export const labelsOf = (value: string | undefined): string[] =>
     .map((label) => label.trim())
     .filter(Boolean);
 
-export type Verdict = { exitCode: 0 | 1; message: string };
-
-export const check = (changed: string[], labels: string[] = []): Verdict => {
-  if (!touchesPackage(changed)) {
+export const check = (changed: string[], published: string[], labels: string[] = []): Verdict => {
+  if (!touchesPackage(changed, published)) {
     return { exitCode: 0, message: 'check-changeset: no publishable change, nothing to require' };
   }
   if (labels.includes(SKIP_LABEL)) {
@@ -82,7 +90,10 @@ export const check = (changed: string[], labels: string[] = []): Verdict => {
 /** Returns the process exit code rather than taking it, so tests can call it. */
 export const main = (
   env: NodeJS.ProcessEnv = process.env,
-  { diff = gitDiff }: { diff?: Differ } = {},
+  {
+    diff = gitDiff,
+    published = publishedDirs(REPO_ROOT),
+  }: { diff?: Differ; published?: string[] } = {},
 ): number => {
   const base = env.BASE_SHA;
   const head = env.HEAD_SHA;
@@ -92,7 +103,7 @@ export const main = (
     return 1;
   }
 
-  const verdict = check(diff(base, head), labelsOf(env.PR_LABELS));
+  const verdict = check(diff(base, head), published, labelsOf(env.PR_LABELS));
   if (verdict.exitCode === 0) console.log(verdict.message);
   else console.error(verdict.message);
   return verdict.exitCode;

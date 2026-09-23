@@ -4,7 +4,8 @@
  * re-push after a prose-only edit finishes in seconds.
  */
 import { execSync } from 'node:child_process';
-import { isEntry } from './entry.js';
+import { isEntry } from '../entry/entry.js';
+import type { Runner } from './verify.types.js';
 
 export const STEPS: [name: string, command: string][] = [
   ['lint', 'pnpm lint'],
@@ -21,9 +22,6 @@ export const STEPS: [name: string, command: string][] = [
   ['dependency dedupe', 'pnpm exec turbo run //#dedupe:check'],
   ['audit', 'pnpm run audit:check'],
 ];
-
-/** Runs one step. Injected so the sequencing can be tested without running it. */
-export type Runner = (command: string) => void;
 
 export const shell: Runner = (command) => {
   execSync(command, { stdio: 'inherit' });

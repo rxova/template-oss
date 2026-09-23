@@ -16,8 +16,9 @@ export default {
   treatConfigHintsAsErrors: true,
   workspaces: {
     'packages/tooling': {
-      // Repo scripts, invoked by name from package.json and CI, never imported.
-      entry: ['*.ts'],
+      // Repo scripts (not their tests or types), invoked by name from
+      // package.json and CI, never imported.
+      entry: ['src/*/*.ts', '!src/**/*.{test,types}.ts'],
     },
   },
 } satisfies KnipConfig;

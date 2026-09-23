@@ -7,20 +7,24 @@ import {
   packSmoke,
   probeSource,
   shell,
+  shippedFiles,
   workspace,
-  type Shell,
-  type Workspace,
 } from './pack-smoke.js';
+import type { Shell, Workspace } from './pack-smoke.types.js';
 
 const SCRATCH = '/scratch';
 
 /** An in-memory workspace holding one package manifest. */
-const memory = (manifest: object, { tarball = true } = {}) => {
+const memory = (
+  manifest: object,
+  { tarball = true, installed = ['LICENSE', 'README.md', 'dist', 'package.json'] } = {},
+) => {
   const files = new Map<string, string>([[join('/pkg', 'package.json'), JSON.stringify(manifest)]]);
   const removed: string[] = [];
   const fs: Workspace = {
     make: () => SCRATCH,
-    list: () => (tarball ? ['rxova-example-0.1.0.tgz'] : []),
+    list: (dir) =>
+      dir.includes('node_modules') ? installed : tarball ? ['scope-example-0.1.0.tgz'] : [],
     read: (file) => files.get(file) ?? '',
     write: (file, contents) => void files.set(file, contents),
     remove: (dir) => void removed.push(dir),
@@ -39,7 +43,7 @@ const npm =
 
 describe('binsOf', () => {
   it('names a string bin after the package, scope dropped', () => {
-    expect(binsOf({ name: '@rxova/example', version: '1.0.0', bin: './dist/cli.js' })).toEqual([
+    expect(binsOf({ name: '@scope/example', version: '1.0.0', bin: './dist/cli.js' })).toEqual([
       'example',
     ]);
   });
@@ -56,15 +60,29 @@ describe('binsOf', () => {
   });
 });
 
+describe('shippedFiles', () => {
+  it('always wants the license and the README', () => {
+    expect(shippedFiles({ name: 'x', version: '1.0.0' })).toEqual(['LICENSE', 'README.md']);
+  });
+
+  it('adds every other `files` entry, leaving dist to the probe', () => {
+    expect(shippedFiles({ name: 'x', version: '1.0.0', files: ['dist', 'schema.json'] })).toEqual([
+      'LICENSE',
+      'README.md',
+      'schema.json',
+    ]);
+  });
+});
+
 describe('probeSource', () => {
   it('imports the package by name through its exports map', () => {
-    expect(probeSource('@rxova/example')).toContain('await import("@rxova/example")');
+    expect(probeSource('@scope/example')).toContain('await import("@scope/example")');
   });
 });
 
 describe('packSmoke', () => {
   it('packs, installs, imports, and cleans up', () => {
-    const { fs, files, removed } = memory({ name: '@rxova/example', version: '0.1.0' });
+    const { fs, files, removed } = memory({ name: '@scope/example', version: '0.1.0' });
     const calls: string[] = [];
     const sh: Shell = (command, args, cwd) => {
       calls.push(`${command} ${args[0] ?? ''} @ ${cwd}`);
@@ -72,14 +90,14 @@ describe('packSmoke', () => {
     };
 
     expect(packSmoke({ pkgDir: '/pkg', sh, fs })).toBe(
-      'pack:smoke ok — @rxova/example@0.1.0 installs and imports from a tarball',
+      'pack:smoke ok — @scope/example@0.1.0 installs and imports from a tarball',
     );
     expect(calls).toEqual([
       'npm pack @ /pkg',
       `npm install @ ${SCRATCH}`,
       `node ${join(SCRATCH, 'probe.mjs')} @ ${SCRATCH}`,
     ]);
-    expect(files.get(join(SCRATCH, 'probe.mjs'))).toContain('@rxova/example');
+    expect(files.get(join(SCRATCH, 'probe.mjs'))).toContain('@scope/example');
     expect(removed).toEqual([SCRATCH]);
   });
 
@@ -93,6 +111,17 @@ describe('packSmoke', () => {
   it('fails when npm pack wrote no tarball, and still cleans up', () => {
     const { fs, removed } = memory({ name: 'x', version: '1.0.0' }, { tarball: false });
     expect(() => packSmoke({ pkgDir: '/pkg', sh: npm(), fs })).toThrow('produced no tarball');
+    expect(removed).toEqual([SCRATCH]);
+  });
+
+  it('fails when the installed package is missing a shipped file', () => {
+    const { fs, removed } = memory(
+      { name: 'x', version: '1.0.0', files: ['dist', 'schema.json'] },
+      { installed: ['README.md', 'dist', 'package.json'] },
+    );
+    expect(() => packSmoke({ pkgDir: '/pkg', sh: npm(), fs })).toThrow(
+      'the tarball does not contain LICENSE, schema.json',
+    );
     expect(removed).toEqual([SCRATCH]);
   });
 

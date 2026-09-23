@@ -76,10 +76,14 @@ describe('verify', () => {
 
 describe('shell', () => {
   it('runs a command', () => {
-    expect(() => shell(`"${process.execPath}" -e "0"`)).not.toThrow();
+    expect(() => {
+      shell(`"${process.execPath}" -e "0"`);
+    }).not.toThrow();
   });
 
   it('throws when the command fails, which is what verify catches', () => {
-    expect(() => shell(`"${process.execPath}" -e "process.exit(3)"`)).toThrow();
+    expect(() => {
+      shell(`"${process.execPath}" -e "process.exit(3)"`);
+    }).toThrow();
   });
 });

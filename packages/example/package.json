@@ -37,11 +37,11 @@
     "test": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
     "check:exports": "publint --strict && attw --pack . --profile esm-only",
-    "pack:smoke": "node --import tsx ../tooling/pack-smoke.ts"
+    "pack:smoke": "node --import tsx ../tooling/src/pack-smoke/pack-smoke.ts"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.5",
-    "@rxova/config": "workspace:*",
+    "@repo/config": "workspace:*",
     "@types/node": "^26.6.2",
     "@vitest/coverage-v8": "^5.0.1",
     "publint": "^0.3.24",

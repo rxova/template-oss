@@ -13,22 +13,13 @@
  */
 import { appendFileSync, existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { isEntry } from './entry.js';
-
-/** The only file access this module needs. Injected for tests. */
-export type Workspace = {
-  list: (dir: string) => string[];
-  read: (file: string) => string | undefined;
-};
+import { isEntry } from '../entry/entry.js';
+import type { Workspace, Manifest, Published } from './node-floor.types.js';
 
 export const workspace: Workspace = {
   list: (dir) => (existsSync(dir) ? readdirSync(dir) : []),
   read: (file) => (existsSync(file) ? readFileSync(file, 'utf8') : undefined),
 };
-
-type Manifest = { name?: string; private?: boolean; engines?: { node?: string } };
-
-export type Published = { dir: string; name: string; floor: string };
 
 /** `>=22.13` → `22.13`. Anything but a plain lower bound has no single floor to test. */
 export const floorOf = (range: string): string | undefined =>
