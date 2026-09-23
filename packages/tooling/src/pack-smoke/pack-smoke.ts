@@ -5,7 +5,9 @@
  * This is the only check that catches a `files` entry that dropped dist, an
  * exports map that resolves for a bundler but not for plain Node, or a bin that
  * lost its execute bit somewhere between the build and npm. Every one of those
- * ships green through lint, types and unit tests.
+ * ships green through lint, types and unit tests. It also checks the files a
+ * reader opens in `node_modules` beside dist: the README, the license, and
+ * whatever else `files` lists.
  *
  * Run from a package directory (`pnpm run pack:smoke` in each package). The
  * commands and the scratch directory are injected rather than reached for
@@ -16,16 +18,8 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { isEntry } from './entry.js';
-
-export type Shell = (command: string, args: string[], cwd: string) => string;
-export type Workspace = {
-  make: () => string;
-  list: (dir: string) => string[];
-  read: (file: string) => string;
-  write: (file: string, contents: string) => void;
-  remove: (dir: string) => void;
-};
+import { isEntry } from '../entry/entry.js';
+import type { Shell, Workspace, Manifest } from './pack-smoke.types.js';
 
 export const shell: Shell = (command, args, cwd) =>
   execFileSync(command, args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
@@ -34,17 +28,26 @@ export const workspace: Workspace = {
   make: () => mkdtempSync(join(tmpdir(), 'pack-smoke-')),
   list: (dir) => readdirSync(dir),
   read: (file) => readFileSync(file, 'utf8'),
-  write: (file, contents) => writeFileSync(file, contents),
-  remove: (dir) => rmSync(dir, { recursive: true, force: true }),
+  write: (file, contents) => {
+    writeFileSync(file, contents);
+  },
+  remove: (dir) => {
+    rmSync(dir, { recursive: true, force: true });
+  },
 };
-
-export type Manifest = { name: string; version: string; bin?: string | Record<string, string> };
 
 /** The command names a package installs: a string `bin` is named after the package. */
 export const binsOf = ({ name, bin }: Manifest): string[] => {
   if (typeof bin === 'string') return [name.replace(/^@[^/]+\//, '')];
   return Object.keys(bin ?? {});
 };
+
+/** Files the installed package must hold besides dist, which the probe covers. */
+export const shippedFiles = (manifest: Manifest): string[] => [
+  'LICENSE',
+  'README.md',
+  ...(manifest.files ?? []).filter((file) => file !== 'dist'),
+];
 
 /** The probe a consumer's Node would run, with no bundler in the way. */
 export const probeSource = (name: string): string =>
@@ -77,6 +80,10 @@ export const packSmoke = ({
 
     fs.write(join(scratch, 'package.json'), JSON.stringify({ name: 'scratch', private: true }));
     sh('npm', ['install', '--no-audit', '--no-fund', join(scratch, tarball)], scratch);
+
+    const installed = fs.list(join(scratch, 'node_modules', manifest.name));
+    const missing = shippedFiles(manifest).filter((file) => !installed.includes(file));
+    if (missing.length > 0) throw new Error(`the tarball does not contain ${missing.join(', ')}`);
 
     // Every bin, as a consumer gets it.
     for (const bin of binsOf(manifest)) {

@@ -20,10 +20,8 @@
  */
 import { execFileSync } from 'node:child_process';
 import { appendFileSync } from 'node:fs';
-import { isEntry } from './entry.js';
-
-/** The only thing this module needs a repository for. Injected for tests. */
-export type Git = (...args: string[]) => string;
+import { isEntry } from '../entry/entry.js';
+import type { Git, Scope } from './check-scope.types.js';
 
 export const git: Git = (...args) =>
   execFileSync('git', args, { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 });
@@ -45,8 +43,6 @@ export const isReleaseMetadata = (file: string): boolean =>
   (file.startsWith('.changeset/') && file.endsWith('.md')) ||
   file === 'CHANGELOG.md' ||
   file.endsWith('/CHANGELOG.md');
-
-export type Scope = { codeChanged: boolean; reason: string };
 
 export const decideScope = (
   base: string | undefined,
@@ -79,9 +75,9 @@ export const decideScope = (
   return releaseOnly
     ? {
         codeChanged: false,
-        reason: `release commit — ${changed.length} file(s), version and changelog only`,
+        reason: `release commit — ${String(changed.length)} file(s), version and changelog only`,
       }
-    : { codeChanged: true, reason: `${changed.length} file(s) changed` };
+    : { codeChanged: true, reason: `${String(changed.length)} file(s) changed` };
 };
 
 /** Returns the process exit code rather than taking it, so tests can call it. */
@@ -92,10 +88,10 @@ export const main = (
   const verdict = decideScope(env.BASE_SHA, env.HEAD_SHA, run);
 
   console.log(`check-scope: ${verdict.reason}`);
-  console.log(`check-scope: code-changed=${verdict.codeChanged}`);
+  console.log(`check-scope: code-changed=${String(verdict.codeChanged)}`);
 
   if (env.GITHUB_OUTPUT) {
-    appendFileSync(env.GITHUB_OUTPUT, `code-changed=${verdict.codeChanged}\n`);
+    appendFileSync(env.GITHUB_OUTPUT, `code-changed=${String(verdict.codeChanged)}\n`);
   }
   return 0;
 };

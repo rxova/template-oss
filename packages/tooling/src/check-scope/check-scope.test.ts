@@ -4,14 +4,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import {
-  decideScope,
-  git,
-  isReleaseMetadata,
-  main,
-  versionBumpOnly,
-  type Git,
-} from './check-scope.js';
+import { decideScope, git, isReleaseMetadata, main, versionBumpOnly } from './check-scope.js';
+import type { Git } from './check-scope.types.js';
 
 const RANGE = { base: 'aaa', head: 'bbb' };
 

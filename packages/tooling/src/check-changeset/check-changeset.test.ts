@@ -1,4 +1,7 @@
 import { execFileSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -8,33 +11,59 @@ import {
   labelsOf,
   main,
   SKIP_LABEL,
+  publishedDirs,
+  REPO_ROOT,
   touchesPackage,
 } from './check-changeset.js';
 
+const PUBLISHED = ['example'];
+
+describe('publishedDirs', () => {
+  it('finds the non-private packages of this repository, and only those', () => {
+    const dirs = publishedDirs(REPO_ROOT);
+    expect(dirs).toContain('example');
+    expect(dirs).not.toContain('tooling');
+    expect(dirs).not.toContain('config');
+  });
+
+  it('skips a directory without a manifest', () => {
+    const root = mkdtempSync(join(tmpdir(), 'check-changeset-'));
+    try {
+      mkdirSync(join(root, 'packages', 'empty'), { recursive: true });
+      mkdirSync(join(root, 'packages', 'lib'));
+      writeFileSync(join(root, 'packages', 'lib', 'package.json'), '{"name":"lib"}');
+      expect(publishedDirs(root)).toEqual(['lib']);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
 describe('touchesPackage', () => {
   it('sees a source change', () => {
-    expect(touchesPackage(['packages/example/src/index.ts'])).toBe(true);
+    expect(touchesPackage(['packages/example/src/index.ts'], PUBLISHED)).toBe(true);
   });
 
   it.each([
     'packages/example/README.md',
     'packages/example/src/index.test.ts',
     'packages/example/src/__tests__/fixture.ts',
-    'packages/tooling/verify.ts',
+    'packages/example-two/src/index.ts',
+    'packages/tooling/src/verify/verify.ts',
     'packages/config/tsdown.base.ts',
     'apps/docs/src/content/docs/index.mdx',
     '.github/workflows/ci.yml',
     'README.md',
   ])('does not count %s as publishable', (file) => {
-    expect(touchesPackage([file])).toBe(false);
+    expect(touchesPackage([file], PUBLISHED)).toBe(false);
   });
 
   it('is true as soon as one file in the set ships', () => {
-    expect(touchesPackage(['README.md', 'packages/example/src/index.ts'])).toBe(true);
+    expect(touchesPackage(['README.md', 'packages/example/src/index.ts'], PUBLISHED)).toBe(true);
   });
 
   it('is false for an empty diff', () => {
-    expect(touchesPackage([])).toBe(false);
+    expect(touchesPackage([], PUBLISHED)).toBe(false);
   });
 });
 
@@ -53,19 +82,22 @@ describe('hasChangeset', () => {
 
 describe('check', () => {
   it('requires nothing when nothing publishable changed', () => {
-    const verdict = check(['packages/tooling/verify.ts']);
+    const verdict = check(['packages/tooling/src/verify/verify.ts'], PUBLISHED);
     expect(verdict.exitCode).toBe(0);
     expect(verdict.message).toContain('no publishable change');
   });
 
   it('is satisfied by a changeset alongside the change', () => {
-    const verdict = check(['packages/example/src/index.ts', '.changeset/tidy-pandas-smile.md']);
+    const verdict = check(
+      ['packages/example/src/index.ts', '.changeset/tidy-pandas-smile.md'],
+      PUBLISHED,
+    );
     expect(verdict.exitCode).toBe(0);
     expect(verdict.message).toContain('changeset present');
   });
 
   it('fails a publishable change with no changeset, and says what to do', () => {
-    const verdict = check(['packages/example/src/index.ts']);
+    const verdict = check(['packages/example/src/index.ts'], PUBLISHED);
     expect(verdict.exitCode).toBe(1);
     expect(verdict.message).toContain('adds no changeset');
     expect(verdict.message).toContain('pnpm changeset');
@@ -73,13 +105,16 @@ describe('check', () => {
   });
 
   it('asks for nothing when the pull request carries the label', () => {
-    const verdict = check(['packages/example/package.json'], ['dependencies', SKIP_LABEL]);
+    const verdict = check(['packages/example/package.json'], PUBLISHED, [
+      'dependencies',
+      SKIP_LABEL,
+    ]);
     expect(verdict.exitCode).toBe(0);
     expect(verdict.message).toContain(SKIP_LABEL);
   });
 
   it('is not satisfied by some other label', () => {
-    expect(check(['packages/example/src/index.ts'], ['dependencies']).exitCode).toBe(1);
+    expect(check(['packages/example/src/index.ts'], PUBLISHED, ['dependencies']).exitCode).toBe(1);
   });
 });
 
@@ -111,7 +146,7 @@ describe('main', () => {
   });
 
   it('asks for the diff of exactly the range it was given', () => {
-    const diff = vi.fn(() => ['packages/tooling/verify.ts']);
+    const diff = vi.fn(() => ['packages/tooling/src/verify/verify.ts']);
     expect(main({ BASE_SHA: 'aaa', HEAD_SHA: 'bbb' }, { diff })).toBe(0);
     expect(diff).toHaveBeenCalledWith('aaa', 'bbb');
     expect(log).toHaveBeenCalledWith(expect.stringContaining('no publishable change'));

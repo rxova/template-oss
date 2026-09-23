@@ -7,9 +7,12 @@
     "build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**"],
-      // Tests and prose cannot change dist, so editing them should not cost a rebuild.
+      // Tests and prose cannot change dist, so editing them should not cost a
+      // rebuild. The shared preset is named explicitly: @repo/config has no
+      // build task, so nothing in `dependsOn` would carry a change to it.
       "inputs": [
         "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/packages/config/tsdown.base.ts",
         "!**/*.test.ts",
         "!**/__tests__/**",
         "!README.md",
@@ -22,9 +25,12 @@
       "outputs": [],
       "outputLogs": "new-only"
     },
+    // Keyed on the shared preset for the same reason as build: a raised
+    // threshold has to re-run every suite, not replay yesterday's pass.
     "test": {
       "dependsOn": ["^build"],
       "outputs": ["coverage/**"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/packages/config/vitest.base.ts"],
       "outputLogs": "new-only"
     },
     // publint and attw read the manifest and the emitted types.
@@ -38,7 +44,7 @@
     "pack:smoke": {
       "dependsOn": ["build"],
       "outputs": [],
-      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/packages/tooling/pack-smoke.ts"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/packages/tooling/src/pack-smoke/pack-smoke.ts"],
       "outputLogs": "new-only"
     },
     // Root tasks (`//#`): each reads the whole tree in one pass, so there is

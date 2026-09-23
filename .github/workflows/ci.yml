@@ -52,7 +52,7 @@ jobs:
           HEAD_SHA: >-
             ${{ github.event_name == 'pull_request'
             && github.event.pull_request.head.sha || github.sha }}
-        run: node --import tsx ./packages/tooling/check-scope.ts
+        run: node --import tsx ./packages/tooling/src/check-scope/check-scope.ts
 
       - name: Lint the branch commits
         if: github.event_name == 'pull_request'
@@ -86,6 +86,23 @@ jobs:
         run: pnpm exec turbo run build --filter='!docs'
       - name: Typecheck
         run: pnpm exec turbo run typecheck
+      # Turbo only runs suites it knows about. A package with a vitest config
+      # but no `test` script would be skipped without a word, so look for the
+      # config rather than trusting the task graph.
+      - name: Every package with tests is in the task graph
+        run: |
+          set -eu
+          missing=''
+          for config in packages/*/vitest.config.* apps/*/vitest.config.*; do
+            [ -e "$config" ] || continue
+            pkg=$(dirname "$config")
+            node -e "process.exit(require('./$pkg/package.json').scripts?.test ? 0 : 1)" \
+              || missing="$missing $pkg"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::these packages have a vitest config but no test script:$missing"
+            exit 1
+          fi
 
   test:
     name: unit (node ${{ matrix.node-version }}, ${{ matrix.os }})
@@ -199,7 +216,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Read the Node floor from engines
         id: floor
-        run: node --import tsx ./packages/tooling/node-floor.ts
+        run: node --import tsx ./packages/tooling/src/node-floor/node-floor.ts
       - name: Build
         if: steps.floor.outputs.version != ''
         run: pnpm exec turbo run build --filter='./packages/*'
@@ -215,7 +232,7 @@ jobs:
         run: |
           node --version
           for dir in $PACKAGES; do
-            (cd "$dir" && node --import tsx ../tooling/pack-smoke.ts)
+            (cd "$dir" && node --import tsx ../tooling/src/pack-smoke/pack-smoke.ts)
           done
 
   docs:
@@ -257,7 +274,7 @@ jobs:
           # Still runs and reports rather than being skipped by an `if:`, so that
           # honouring the label is visible in a log somebody can read.
           PR_LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
-        run: node --import tsx ./packages/tooling/check-changeset.ts
+        run: node --import tsx ./packages/tooling/src/check-changeset/check-changeset.ts
 
   # The single context branch protection should require, and the only job here
   # that never skips. Matrix jobs skipped before expansion report under their

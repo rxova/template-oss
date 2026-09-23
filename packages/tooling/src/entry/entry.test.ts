@@ -1,12 +1,12 @@
 import { pathToFileURL } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { isEntry } from './entry.js';
+import { isEntry } from '../entry/entry.js';
 
 describe('isEntry', () => {
-  const script = pathToFileURL('/repo/packages/tooling/verify.ts').href;
+  const script = pathToFileURL('/repo/packages/tooling/src/verify/verify.ts').href;
 
   it('is true for the file Node was asked to run', () => {
-    expect(isEntry(script, '/repo/packages/tooling/verify.ts')).toBe(true);
+    expect(isEntry(script, '/repo/packages/tooling/src/verify/verify.ts')).toBe(true);
   });
 
   it('is false for a module that was only imported', () => {
