@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build && rxova-docs-kit check-md-routes --untwinned 404.html,index.html",
+    "sync": "astro sync",
     "preview": "astro preview",
     "typecheck": "astro check"
   },
