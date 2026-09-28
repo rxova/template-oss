@@ -10,10 +10,10 @@ on:
   push:
     branches: [main]
     paths:
-      - 'apps/docs/**'
-      - 'packages/*/src/**'
-      - 'pnpm-lock.yaml'
-      - '.github/workflows/docs.yml'
+      - "apps/docs/**"
+      - "packages/*/src/**"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/docs.yml"
   workflow_dispatch:
 
 permissions:
@@ -51,9 +51,9 @@ jobs:
       - if: steps.pages.outputs.enabled == 'true'
         uses: actions/checkout@v7
       - if: steps.pages.outputs.enabled == 'true'
-        uses: ./.github/actions/setup-pnpm
+        uses: rxova/shared/actions/setup-pnpm@main
       - if: steps.pages.outputs.enabled == 'true'
-        uses: ./.github/actions/turbo-cache
+        uses: rxova/shared/actions/turbo-cache@main
       - if: steps.pages.outputs.enabled == 'true'
         run: pnpm install --frozen-lockfile
 

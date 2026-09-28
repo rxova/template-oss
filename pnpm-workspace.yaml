@@ -13,3 +13,11 @@ fetchTimeout: 15000
 fetchRetries: 1
 fetchRetryMintimeout: 5000
 fetchRetryMaxtimeout: 10000
+
+# First-party releases installed before they reached pnpm's minimum release age.
+# Exact versions, so the exemption expires with the next bump: delete an entry
+# once that version is older than the policy.
+minimumReleaseAgeExclude:
+  - "@rxova/docs-kit@0.1.0"
+  - "@rxova/repo-config@0.3.0"
+  - "@rxova/ts-utils@0.2.0"

@@ -1,6 +1,6 @@
 name: Bug report
 description: Something that does not work the way the docs say it should
-labels: ['bug']
+labels: ["bug"]
 body:
   - type: markdown
     attributes:
@@ -13,7 +13,7 @@ body:
     attributes:
       label: Version
       description: The package version you are using.
-      placeholder: '1.0.0'
+      placeholder: "1.0.0"
     validations:
       required: true
 
@@ -22,7 +22,7 @@ body:
     attributes:
       label: Environment
       description: Node version, operating system, and bundler or runtime if relevant.
-      placeholder: 'Node 24, macOS 26'
+      placeholder: "Node 24, macOS 26"
     validations:
       required: true
 

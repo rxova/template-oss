@@ -24,21 +24,4 @@ jobs:
     # `changes.title` is only present when the edit touched the title, so a
     # body edit costs no runner at all.
     if: github.event.action != 'edited' || github.event.changes.title
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v7
-      - uses: ./.github/actions/setup-pnpm
-      - run: pnpm install --frozen-lockfile
-
-      # Read live from the API rather than out of `github.event`, so an
-      # overlapping older run cannot affirm a title a newer edit has broken.
-      # Piped, never interpolated — a PR title is attacker-controlled text.
-      - name: Lint the PR title
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          set -o pipefail
-          gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json title --jq .title \
-            | pnpm exec commitlint --verbose
+    uses: rxova/shared/.github/workflows/lint-pr-title.yml@main

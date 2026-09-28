@@ -1,6 +1,8 @@
-import { defineConfig } from 'astro/config';
-import starlight from '@astrojs/starlight';
-import starlightLinksValidator from 'starlight-links-validator';
+import { defineConfig } from "astro/config";
+import starlight from "@astrojs/starlight";
+import starlightLinksValidator from "starlight-links-validator";
+import { fileURLToPath } from "node:url";
+import { rehypeMdLinks } from "@rxova/docs-kit";
 
 /**
  * The defaults keep a standalone build working — `pnpm docs` serves the site at
@@ -8,24 +10,29 @@ import starlightLinksValidator from 'starlight-links-validator';
  * GitHub Pages serves it at, `/<repository>/`. Starlight writes the sitemap on
  * its own whenever `site` is set.
  */
-const site = process.env.DOCS_URL ?? 'https://rxova.github.io';
-const base = process.env.DOCS_BASE_URL ?? '/';
+const site = process.env.DOCS_URL ?? "https://rxova.github.io";
+const base = process.env.DOCS_BASE_URL ?? "/";
+const docsRoot = fileURLToPath(new URL("src/content/docs", import.meta.url));
 
 export default defineConfig({
   site,
   base,
 
+  // `../reference/api.md` in a page links to the HTML page under the base, so a
+  // page can link to another the way its Markdown twin reads.
+  markdown: { rehypePlugins: [[rehypeMdLinks, { base, docsRoot }]] },
+
   integrations: [
     starlight({
-      title: 'template-oss',
-      description: 'Documentation for template-oss.',
-      social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/rxova/template-oss' }],
+      title: "template-oss",
+      description: "Documentation for template-oss.",
+      social: [{ icon: "github", label: "GitHub", href: "https://github.com/rxova/template-oss" }],
       editLink: {
-        baseUrl: 'https://github.com/rxova/template-oss/edit/main/apps/docs/',
+        baseUrl: "https://github.com/rxova/template-oss/edit/main/apps/docs/",
       },
       sidebar: [
-        { label: 'Start here', items: [{ autogenerate: { directory: 'start' } }] },
-        { label: 'Reference', items: [{ autogenerate: { directory: 'reference' } }] },
+        { label: "Start here", items: [{ autogenerate: { directory: "start" } }] },
+        { label: "Reference", items: [{ autogenerate: { directory: "reference" } }] },
       ],
       plugins: [
         // A link that rots fails the build, instead of a reader finding it.

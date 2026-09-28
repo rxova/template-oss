@@ -36,17 +36,15 @@
     "dev": "tsdown --watch",
     "test": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
-    "check:exports": "publint --strict && attw --pack . --profile esm-only",
-    "pack:smoke": "node --import tsx ../tooling/src/pack-smoke/pack-smoke.ts"
+    "check:exports": "rxova-repo-config check-exports --profile esm-only",
+    "pack:smoke": "rxova-repo-config pack-smoke"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.5",
-    "@repo/config": "workspace:*",
     "@types/node": "^26.6.2",
     "@vitest/coverage-v8": "^5.0.1",
     "publint": "^0.3.24",
     "tsdown": "^0.23.0",
-    "tsx": "^4.23.15",
     "typescript": "6.0.3",
     "vitest": "^5.0.1"
   }
