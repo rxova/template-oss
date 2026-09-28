@@ -11,6 +11,11 @@
       "env": ["DOCS_URL", "DOCS_BASE_URL"],
       "outputLogs": "new-only"
     },
+    // The generated content and env types, for type-checked lint at the root.
+    "sync": {
+      "outputs": [".astro/**"],
+      "outputLogs": "new-only"
+    },
     // `astro check` generates the content types it needs itself.
     "typecheck": {
       "dependsOn": [],
