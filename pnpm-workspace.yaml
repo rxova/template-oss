@@ -19,5 +19,5 @@ fetchRetryMaxtimeout: 10000
 # once that version is older than the policy.
 minimumReleaseAgeExclude:
   - "@rxova/docs-kit@0.1.0"
-  - "@rxova/repo-config@0.3.0"
+  - "@rxova/repo-config@0.5.0"
   - "@rxova/ts-utils@0.2.0"

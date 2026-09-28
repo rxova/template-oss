@@ -19,25 +19,19 @@ breadth.
 
 ## After creating a repository from this template
 
-1. Replace the template's owner and name everywhere, and rename the example package:
-   ```sh
-   grep -rlE 'rxova|template-oss' --exclude-dir=node_modules --exclude-dir=.git . \
-     | xargs sed -i '' 's#rxova/template-oss#<owner>/<repo>#g; s/template-oss/<repo>/g'
-   git mv packages/example packages/<name>   # then update "name" and "repository.directory"
-   ```
-   Then set the maintainer in `LICENSE`, `.github/CODEOWNERS` and `CODE_OF_CONDUCT.md`.
-2. `pnpm install`
-3. Create the labels Renovate and the changeset gate use (templates do not copy labels):
-   ```sh
-   gh label create dependencies --color 0366d6 && gh label create skip-changeset --color ededed
-   ```
-4. **Docs:** Settings → Pages → Source: **GitHub Actions**. The Docs workflow skips itself until
-   then.
-5. **npm:** publish the first version by hand (`npm publish --access public` in the package), add a
+```sh
+pnpm install && pnpm exec rxova-repo-config init
+```
+
+`init` renames the template to your repository everywhere, turns `packages/example` into
+`packages/<repo>`, copies the template's labels and turns GitHub Pages on (`--dry-run` shows the
+plan first). Branch rules come from the organisation's rulesets. Then:
+
+1. `pnpm install`, review `git diff`, and commit.
+2. **npm:** publish the first version by hand (`npm publish --access public` in the package), add a
    trusted publisher on npmjs.com (repository `<owner>/<repo>`, workflow `release.yml`), then set the
    repository variable `RELEASE_ENABLED` to `true`. Releases stay off until you do.
-6. **Branch protection** on `main`: require the `all checks` status.
-7. Optional: add a `CODECOV_TOKEN` secret for coverage comments.
+3. Optional: a `CODECOV_TOKEN` secret for coverage comments.
 
 ## Commands
 
