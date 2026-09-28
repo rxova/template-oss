@@ -8,7 +8,7 @@ pnpm add @rxova/example
 ```
 
 ```ts
-import { greet } from '@rxova/example';
+import { greet } from "@rxova/example";
 
-greet('Ada'); // 'Hello, Ada.'
+greet("Ada"); // 'Hello, Ada.'
 ```

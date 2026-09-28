@@ -6,7 +6,7 @@ on:
   pull_request:
     branches: [main]
   schedule:
-    - cron: '17 9 * * 6'
+    - cron: "17 9 * * 6"
   workflow_dispatch:
 
 permissions:
@@ -29,7 +29,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: ['javascript-typescript', 'actions']
+        language: ["javascript-typescript", "actions"]
     steps:
       # Whether code scanning accepts an upload at all. Where Code Security is
       # not enabled (a private repository without it, or this template before a

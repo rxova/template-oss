@@ -1,4 +1,4 @@
-import { defineConfig } from 'tsdown';
-import { baseBuildConfig } from '@repo/config/tsdown.base';
+import { defineConfig } from "tsdown";
+import { baseBuildConfig } from "@rxova/repo-config/tsdown";
 
 export default defineConfig(baseBuildConfig());

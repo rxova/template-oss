@@ -13,7 +13,7 @@ coverage:
         threshold: 0%
 
 comment:
-  layout: 'condensed_header, diff, flags, components'
+  layout: "condensed_header, diff, flags, components"
   require_changes: true
 
 flag_management:
@@ -21,7 +21,6 @@ flag_management:
     carryforward: true
 
 ignore:
-  - 'apps/**'
-  - 'packages/tooling/**'
-  - '**/*.test.ts'
-  - '**/__tests__/**'
+  - "apps/**"
+  - "**/*.test.ts"
+  - "**/__tests__/**"

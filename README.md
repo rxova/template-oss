@@ -6,17 +6,16 @@ breadth.
 
 ## What is in it
 
-| Piece              | Details                                                                                                                                                                                                           |
-| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `packages/example` | Publishable ESM package built with tsdown; publint + attw + a pack smoke test                                                                                                                                     |
-| `packages/config`  | Shared tsdown and vitest presets (`@repo/config/*`), the one home of the build defaults and coverage thresholds                                                                                                   |
-| `packages/tooling` | `verify` (the pre-push gate), changeset gate, release-commit detection, Node floor, pack smoke                                                                                                                    |
-| `apps/docs`        | Astro Starlight, links validator, sitemap, deployed to GitHub Pages                                                                                                                                               |
-| Quality            | TypeScript 6 strict, ESLint 10 + typescript-eslint (strict, type-checked), Prettier, Vitest 5 (95%/file), knip (unused files/exports/deps), sherif (one version per dep)                                          |
-| Hooks              | Husky: lint-staged + typecheck + tests on commit, commitlint, `verify` on push                                                                                                                                    |
-| Releases           | Changesets → version PR → npm with trusted publishing and provenance                                                                                                                                              |
-| CI                 | Parallel jobs; tests on Node 22/24 × Linux/macOS/Windows; CodeQL; Codecov; one `all checks` gate                                                                                                                  |
-| Renovate           | One weekly PR for every patch/minor, auto-merged once `all checks` passes; majors wait for approval on the Dependency Dashboard; lockfile refreshed monthly; labelled `skip-changeset` (`.github/renovate.json5`) |
+| Piece              | Details                                                                                                                                                                                                                                        |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/example` | Publishable ESM package built with tsdown; publint + attw + a pack smoke test                                                                                                                                                                  |
+| Shared config      | Root dev dependencies from [rxova/shared](https://github.com/rxova/shared): `@rxova/repo-config` (presets + the `rxova-repo-config` bin), `@rxova/ts-utils`, `@rxova/docs-kit`                                                                 |
+| `apps/docs`        | Astro Starlight, links validator, sitemap, `.md` twins + `llms.txt` via `@rxova/docs-kit`, deployed to GitHub Pages                                                                                                                            |
+| Quality            | TypeScript 6 strict, ESLint 10 + typescript-eslint (strict, type-checked), Prettier, Vitest 5 (95%/file), knip (unused files/exports/deps), sherif (one version per dep)                                                                       |
+| Hooks              | Husky: lint-staged + typecheck + tests on commit, commitlint, `verify` on push                                                                                                                                                                 |
+| Releases           | Changesets → version PR → npm with trusted publishing and provenance                                                                                                                                                                           |
+| CI                 | rxova/shared reusable workflows and actions; tests on Node 22/24 × Linux/macOS/Windows; CodeQL; Codecov; one `all checks` gate                                                                                                                 |
+| Renovate           | The rxova/shared org preset: one weekly PR for every patch/minor, auto-merged once `all checks` passes; majors wait for approval on the Dependency Dashboard; lockfile refreshed monthly; labelled `skip-changeset` (`.github/renovate.json5`) |
 
 ## After creating a repository from this template
 
