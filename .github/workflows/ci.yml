@@ -1,37 +1,25 @@
 name: CI
 
-# Public repositories get Actions minutes for free, so this workflow spends them
-# on breadth: every job runs in parallel, tests run on two Node versions across
-# three operating systems, and nothing is traded away to save time.
-#
-# The building blocks come from rxova/shared: reusable workflows at the job
-# level, composite actions at the step level, both at @main.
+# Every job is a reusable workflow from rxova/shared, called at @main. What
+# stays here is the graph: which jobs run, and when.
 
 on:
   push:
     branches: [main]
   pull_request:
-    # No `edited`: it fires on body edits too, and the title check lives in
-    # pr-title.yml. `labeled`/`unlabeled` stay, because the changeset gate's
-    # escape hatch is a label and adding one has to re-run the checks.
+    # No `edited`: the title check lives in pr-title.yml. `labeled`/`unlabeled`
+    # re-run the changeset gate, whose escape hatch is a label.
     types: [opened, synchronize, reopened, labeled, unlabeled]
 
 permissions:
   contents: read
 
-# One lane per ref. On main nothing is cancelled: the release commit that
-# follows a merge skips the matrix because it trusts its parent's verdict, so
-# that verdict has to be one that finished. Superseded pull request runs stay
-# cancellable — the branch is judged again on its next push.
+# Superseded pull request runs are cancelled; main runs always finish.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
-  # The root of the graph: lints the commits and decides with `check-scope` what
-  # the range touched. It runs on push as well as pull_request on purpose: a
-  # skipped job skips its dependents, so gating it on pull_request alone would
-  # silently skip the whole workflow on main.
   commitlint:
     name: commit messages
     uses: rxova/shared/.github/workflows/commit-messages.yml@main
@@ -40,152 +28,42 @@ jobs:
     name: lint · format · types · build
     needs: [commitlint]
     if: needs.commitlint.outputs.code-changed == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v7
-      - uses: rxova/shared/actions/setup-pnpm@main
-      - uses: rxova/shared/actions/turbo-cache@main
-      - run: pnpm install --frozen-lockfile
-      - name: Lint
-        run: pnpm lint
-      - name: Check formatting
-        run: pnpm format:check
-      # The docs app is built by the `docs` job below, at the base path Pages
-      # serves it from — the only build of it whose output matters.
-      - name: Build
-        run: pnpm exec turbo run build --filter='!docs'
-      - name: Typecheck
-        run: pnpm exec turbo run typecheck
-      # Turbo only runs suites it knows about: a package with a vitest config
-      # but no `test` script would be skipped without a word.
-      - name: Every package with tests is in the task graph
-        run: pnpm exec rxova-repo-config check-test-scripts
+    uses: rxova/shared/.github/workflows/repo-checks.yml@main
 
   test:
-    name: unit (node ${{ matrix.node-version }}, ${{ matrix.os }})
+    name: unit
     needs: [commitlint]
     if: needs.commitlint.outputs.code-changed == 'true'
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        # 22 is the major `engines` promises; 24 is current LTS. Path
-        # separators, line endings and the shell all differ on Windows, and only
-        # a Windows leg would notice.
-        node-version: [22, 24]
-        os: [ubuntu-latest, macos-latest, windows-latest]
-    steps:
-      - uses: actions/checkout@v7
-      - uses: rxova/shared/actions/setup-pnpm@main
-        with:
-          node-version: ${{ matrix.node-version }}
-      # Turbo hashes files and env, not the Node binary, and the cache action
-      # keys on the job name — one string for every leg. Naming the partition
-      # after the leg keeps one Node from replaying a result from another.
-      - uses: rxova/shared/actions/turbo-cache@main
-        with:
-          key: unit-${{ matrix.os }}-node${{ matrix.node-version }}
-      - run: pnpm install --frozen-lockfile
-      - name: Test with coverage thresholds
-        run: pnpm test
-      # One leg reports, so the numbers are never averaged across platforms.
-      # Informational: vitest's per-file thresholds are the real gate, and an
-      # outage at the coverage service must not turn a pull request red.
-      - name: Upload coverage
-        if: matrix.os == 'ubuntu-latest' && matrix.node-version == 24
-        uses: codecov/codecov-action@v7
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          fail_ci_if_error: false
+    uses: rxova/shared/.github/workflows/unit-tests.yml@main
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   supply-chain:
     name: audit · sherif · knip · dedupe
     needs: [commitlint]
     if: needs.commitlint.outputs.code-changed == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v7
-      - uses: rxova/shared/actions/setup-pnpm@main
-      - uses: rxova/shared/actions/turbo-cache@main
-      - run: pnpm install --frozen-lockfile
-      # Not a Turbo task: its verdict changes with the advisory database, not
-      # with any file here, so a cached pass could replay over a fresh CVE.
-      # `--ignore-registry-errors` keeps an unreachable advisory endpoint from
-      # failing the job; `timeout-minutes` is the backstop.
-      - name: Audit dependencies
-        timeout-minutes: 5
-        run: pnpm run audit:check
-      # One version of each dependency across the workspace. Two packages on
-      # two minors of the same library typecheck fine and then disagree at
-      # runtime.
-      - name: Check dependency versions across the workspace
-        run: pnpm run sherif:check
-      # Unused files, exports and dependencies. The only check here that
-      # notices an export nothing imports.
-      - name: Check for unused files, exports and dependencies
-        run: pnpm run knip:check
-      # Last, and it has to stay last: `pnpm dedupe --check` removes the
-      # modules directory when CI is set, so any step after it runs without
-      # node_modules and fails looking for its own binary.
-      - name: Check dependency dedupe
-        run: pnpm exec turbo run //#dedupe:check
+    uses: rxova/shared/.github/workflows/supply-chain.yml@main
 
   pack-smoke:
     name: package contract
     needs: [commitlint]
     if: needs.commitlint.outputs.code-changed == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v7
-      - uses: rxova/shared/actions/setup-pnpm@main
-      - uses: rxova/shared/actions/turbo-cache@main
-      - run: pnpm install --frozen-lockfile
-      - name: Publint and Are The Types Wrong
-        run: pnpm run check:exports
-      # Packs the real tarball, installs it into a scratch project and imports
-      # it with plain Node. The only check that catches a `files` entry that
-      # dropped dist.
-      - name: Pack smoke test
-        run: pnpm run pack:smoke
+    uses: rxova/shared/.github/workflows/package-contract.yml@main
 
-  # The unit matrix runs the newest release of each Node major, which says little
-  # about the oldest one `engines` promises: this installs each packed tarball on
-  # exactly that floor, read from the manifests.
   compat:
     name: packages on their oldest node
     needs: [commitlint]
     if: needs.commitlint.outputs.code-changed == 'true'
     uses: rxova/shared/.github/workflows/node-floor-smoke.yml@main
 
-  # Also on a documentation-only range that touched the site: its content is
-  # what this build validates, links and markdown twins included.
   docs:
     name: docs build
     needs: [commitlint]
     if: >-
       needs.commitlint.outputs.code-changed == 'true' ||
       needs.commitlint.outputs.docs-changed == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v7
-      - uses: rxova/shared/actions/setup-pnpm@main
-      - uses: rxova/shared/actions/turbo-cache@main
-      - run: pnpm install --frozen-lockfile
-      # At the base path Pages serves it from, so an absolute link that only
-      # works at a domain root fails here. The build also runs
-      # starlight-links-validator and `rxova-docs-kit check-md-routes`.
-      - name: Build the docs at the Pages base path
-        env:
-          DOCS_URL: https://${{ github.repository_owner }}.github.io
-          DOCS_BASE_URL: /${{ github.event.repository.name }}/
-        run: pnpm exec turbo run build --filter=docs
+    uses: rxova/shared/.github/workflows/docs-build.yml@main
 
-  # What a documentation-only range runs in place of `checks`: formatting.
   docs-checks:
     name: docs checks
     needs: [commitlint]
@@ -194,30 +72,18 @@ jobs:
     with:
       command: pnpm run prettier:check
 
-  # Still runs and reports on a labelled pull request rather than being skipped
-  # by an `if:`, so that honouring the `skip-changeset` label is visible in a log.
   changeset:
     name: changeset present
     needs: [commitlint]
     uses: rxova/shared/.github/workflows/changeset-gate.yml@main
 
-  # The single context branch protection should require, and the only job here
-  # that never skips. `skipped` is an answer this workflow gives deliberately (a
-  # release commit, a documentation-only range, a push with no pull request), so
-  # the gate accepts it; `cancelled` and `failure` it does not.
+  # The one context branch protection requires. `skipped` passes; `failure`
+  # and `cancelled` do not.
   gate:
     name: all checks
     if: always()
     needs:
-      - commitlint
-      - checks
-      - test
-      - supply-chain
-      - pack-smoke
-      - compat
-      - docs
-      - docs-checks
-      - changeset
+      [commitlint, checks, test, supply-chain, pack-smoke, compat, docs, docs-checks, changeset]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
