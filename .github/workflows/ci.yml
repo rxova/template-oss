@@ -29,6 +29,8 @@ jobs:
     needs: [commitlint]
     if: needs.commitlint.outputs.code-changed == 'true'
     uses: rxova/shared/.github/workflows/repo-checks.yml@main
+    with:
+      extra-command: pnpm run check:llms
 
   test:
     name: unit

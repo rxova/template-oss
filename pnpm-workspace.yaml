@@ -14,10 +14,15 @@ fetchRetries: 1
 fetchRetryMintimeout: 5000
 fetchRetryMaxtimeout: 10000
 
-# First-party releases installed before they reached pnpm's minimum release age.
-# Exact versions, so the exemption expires with the next bump: delete an entry
-# once that version is older than the policy.
+# The release-age quarantine holds a freshly published version back for a day, to
+# blunt supply-chain attacks on packages nobody here controls. @rxova/repo-config,
+# @rxova/ts-utils and @rxova/docs-kit (from rxova/shared) are ours, so waiting one
+# out only delays our own changes — and without the exclusion `pnpm install`
+# refuses the lockfile outright on the day of a bump.
+#
+# By name rather than by version: an exact version expires at the next release
+# and has to be renewed every time.
 minimumReleaseAgeExclude:
-  - "@rxova/docs-kit@0.1.0"
-  - "@rxova/repo-config@0.5.0"
-  - "@rxova/ts-utils@0.2.0"
+  - "@rxova/docs-kit"
+  - "@rxova/repo-config"
+  - "@rxova/ts-utils"

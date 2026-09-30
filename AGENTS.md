@@ -14,9 +14,13 @@ pnpm + Turborepo monorepo. Node >= 22.13. TypeScript everywhere, ESM only.
 
 ## Commands
 
-- `pnpm run verify` — the full gate, same order as CI. Run it before saying work is done.
+- `pnpm run verify` — the pre-push gate, in CI's order; its steps are `repoConfig.verify.steps`
+  in the root `package.json`. It runs every check CI runs except `audit:check`, left to CI so a
+  newly disclosed advisory cannot block an unrelated push, and `pack:smoke`. Run it before saying
+  work is done.
 - `pnpm test` / `pnpm typecheck` / `pnpm lint` / `pnpm format` — the pieces.
 - `pnpm --filter <package> test` — one package.
+- `pnpm run check:llms` — each package's `llms.txt` against its exports; part of `verify`.
 - `pnpm changeset` — record a change to a published package.
 
 ## Rules
@@ -31,3 +35,6 @@ pnpm + Turborepo monorepo. Node >= 22.13. TypeScript everywhere, ESM only.
   truly needed, scope it to one line and say why.
 - Conventional Commits; subject line only. Never `--no-verify`.
 - No new runtime dependency in a published package without saying why.
+- Every published package ships a hand-written `llms.txt` (listed in `files`), and the root
+  `llms.txt` links each one. Its `## API` table must name exactly what `src/index.ts` exports, so
+  rename an export and update the table in the same commit.
