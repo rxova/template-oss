@@ -26,6 +26,7 @@
     "dedupe:check": "pnpm dedupe --check",
     "sherif:check": "sherif --fail-on-warnings",
     "knip:check": "knip",
+    "check:llms": "rxova-repo-config check-llms",
     "check:exports": "turbo run check:exports",
     "pack:smoke": "turbo run pack:smoke --concurrency=1",
     "docs": "pnpm --filter docs dev",
@@ -40,9 +41,9 @@
     "@commitlint/cli": "^21.2.3",
     "@commitlint/config-conventional": "^21.2.3",
     "@eslint/js": "^10.0.1",
-    "@rxova/docs-kit": "^0.1.0",
+    "@rxova/docs-kit": "^0.1.1",
     "@rxova/repo-config": "^0.5.0",
-    "@rxova/ts-utils": "^0.2.0",
+    "@rxova/ts-utils": "^0.2.1",
     "@types/node": "^26.6.2",
     "eslint": "^10.11.0",
     "globals": "^17.12.0",
@@ -54,5 +55,51 @@
     "turbo": "^2.11.2",
     "typescript": "6.0.3",
     "typescript-eslint": "^8.70.0"
+  },
+  "repoConfig": {
+    "verify": {
+      "steps": [
+        {
+          "name": "dependency versions",
+          "command": "pnpm run sherif:check"
+        },
+        {
+          "name": "unused files, exports and dependencies",
+          "command": "pnpm run knip:check"
+        },
+        {
+          "name": "dependency dedupe",
+          "command": "pnpm exec turbo run //#dedupe:check"
+        },
+        {
+          "name": "format",
+          "command": "pnpm run format:check"
+        },
+        {
+          "name": "lint",
+          "command": "pnpm run lint"
+        },
+        {
+          "name": "llms.txt",
+          "command": "pnpm run check:llms"
+        },
+        {
+          "name": "typecheck",
+          "command": "pnpm exec turbo run typecheck"
+        },
+        {
+          "name": "unit tests",
+          "command": "pnpm exec turbo run test"
+        },
+        {
+          "name": "build",
+          "command": "pnpm exec turbo run build --filter='!docs'"
+        },
+        {
+          "name": "package exports",
+          "command": "pnpm run check:exports"
+        }
+      ]
+    }
   }
 }

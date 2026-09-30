@@ -1,0 +1,33 @@
+# template-oss
+
+> A template for open-source TypeScript projects: a pnpm + Turborepo monorepo
+> with one publishable package, an Astro Starlight docs site, and CI from
+> rxova/shared. Replace this summary with what the project does. MIT.
+
+This file is an index. It points to the files that document the project and
+restates none of their content, so there is nothing here to drift from the
+source.
+
+## Packages
+
+Each package ships its `llms.txt` inside its tarball, so after an install it can
+be read from `node_modules/<package>/llms.txt` with no network access.
+
+- [@rxova/example](packages/example/llms.txt): the install line, the API, a
+  working example, and the mistakes to avoid.
+
+## Docs
+
+Every page of the documentation site also exists as raw markdown — add `.md` to
+any URL — and the site serves its own `llms.txt` and `llms-full.txt`.
+
+- [README](packages/example/README.md): install and an example. Also in the
+  tarball.
+
+## Contributing
+
+- [AGENTS.md](AGENTS.md): rules and commands for an agent editing this
+  repository.
+- [CONTRIBUTING.md](CONTRIBUTING.md): setup, the quality gates, commits,
+  changesets and releases.
+- [README.md](README.md): the workspace, CI and the release process.

@@ -1,0 +1,37 @@
+# @rxova/example
+
+> A placeholder package from the template-oss repository template: `greet`
+> returns a greeting for a name. Replace this summary with what the package
+> does, who it is for, and its runtime requirements. Node >= 22.13. MIT. Ships
+> ESM with type declarations.
+
+## Install
+
+    pnpm add @rxova/example
+
+No peer dependencies.
+
+## Minimal working example
+
+```ts
+import { greet } from "@rxova/example";
+
+greet("Ada"); // "Hello, Ada."
+greet("Ada", { excited: true }); // "Hello, Ada!"
+```
+
+## Mistakes to avoid
+
+- An empty or whitespace-only name throws a `TypeError`; it does not return a
+  greeting for nobody.
+
+## API
+
+| Export | Kind | What it does |
+| --- | --- | --- |
+| `greet` | function | `greet(name, { excited? })` returns `"Hello, <name>."`, or `!` when `excited` |
+| `GreetOptions` | type | The options `greet` takes |
+
+## Docs
+
+- [README](README.md): install and an example. Also in the tarball.
