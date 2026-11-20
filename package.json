@@ -45,7 +45,7 @@
     "@rxova/repo-config": "^0.8.0",
     "@rxova/ts-utils": "^0.2.1",
     "@types/node": "^26.6.4",
-    "eslint": "^10.12.0",
+    "eslint": "^10.15.0",
     "globals": "^17.13.0",
     "husky": "^9.1.7",
     "knip": "^6.40.0",
@@ -54,7 +54,7 @@
     "sherif": "^1.13.0",
     "turbo": "^2.11.7",
     "typescript": "6.0.3",
-    "typescript-eslint": "^8.71.1"
+    "typescript-eslint": "^8.73.0"
   },
   "repoConfig": {
     "verify": {
